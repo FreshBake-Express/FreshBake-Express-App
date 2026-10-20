@@ -60,6 +60,7 @@
                     android:background="@android:color/transparent"
                     android:hint="Search customer or store"
                     android:inputType="text"
+                    android:textColor="#1E293B"
                     android:textSize="16sp" />
             </LinearLayout>
 
@@ -77,10 +78,11 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/tvCustomerCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
-                    android:text="5 customers"
+                    android:text="0 customers"
                     android:textColor="@color/text_grey"
                     android:textSize="14sp" />
             </RelativeLayout>
@@ -95,35 +97,11 @@
 
             <!-- Customer List -->
             <LinearLayout
+                android:id="@+id/llCustomerList"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:orientation="vertical">
-
-                <!-- Aarav Patel -->
-                <include
-                    android:id="@+id/customer1"
-                    layout="@layout/item_customer_row" />
-
-                <!-- Meera Shah -->
-                <include
-                    android:id="@+id/customer2"
-                    layout="@layout/item_customer_row" />
-
-                <!-- Rohan Verma -->
-                <include
-                    android:id="@+id/customer3"
-                    layout="@layout/item_customer_row" />
-
-                <!-- Priya Nair -->
-                <include
-                    android:id="@+id/customer4"
-                    layout="@layout/item_customer_row" />
-
-                <!-- Imran Khan -->
-                <include
-                    android:id="@+id/customer5"
-                    layout="@layout/item_customer_row" />
 
             </LinearLayout>
 
@@ -147,15 +125,18 @@
             android:textSize="14sp" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCreateCustomer"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:layout_marginTop="12dp"
-            android:backgroundTint="#1D5B3A"
+            android:backgroundTint="@color/primary_green"
             android:text="Create Customer"
             android:textAllCaps="false"
+            android:textColor="@color/white"
             android:textSize="16sp"
             app:cornerRadius="12dp"
-            app:icon="@android:drawable/ic_input_add" />
+            app:icon="@android:drawable/ic_input_add"
+            app:iconTint="@color/white" />
 
     </LinearLayout>
 

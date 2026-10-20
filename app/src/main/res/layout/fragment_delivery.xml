@@ -23,10 +23,11 @@
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/deliveryDateText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Delivery &amp; billing  •  11 Oct 2026"
+            android:text="Delivery &amp; billing  •  --"
             android:textColor="@color/text_grey"
             android:textSize="14sp" />
 
@@ -53,6 +54,7 @@
                 android:background="@android:color/transparent"
                 android:hint="Search existing customer or store"
                 android:inputType="text"
+                android:textColor="#1E293B"
                 android:textSize="16sp" />
         </LinearLayout>
 
@@ -63,6 +65,17 @@
             android:layout_marginTop="20dp"
             android:background="@drawable/bg_customer_card"
             android:padding="16dp">
+
+            <ImageView
+                android:id="@+id/selectedStatusIcon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginEnd="16dp"
+                android:src="@drawable/ic_check_circle"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="@color/primary_green" />
 
             <TextView
                 android:id="@+id/avatar"
@@ -99,13 +112,7 @@
                 app:layout_constraintStart_toStartOf="@id/customerName"
                 app:layout_constraintTop_toBottomOf="@id/customerName" />
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@android:drawable/checkbox_on_background"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:tint="@color/primary_green" />
+
 
             <TextView
                 android:layout_width="wrap_content"
@@ -120,7 +127,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="₹450"
+                android:text="450"
                 android:textColor="@color/primary_green"
                 android:textSize="18sp"
                 android:textStyle="bold"
@@ -195,7 +202,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
-                android:text="₹790"
+                android:text="790"
                 android:textColor="@color/black"
                 android:textSize="22sp"
                 android:textStyle="bold" />
@@ -257,7 +264,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="₹450"
+                android:text="450"
                 android:textColor="@color/black"
                 android:textSize="16sp"
                 android:textStyle="bold"
@@ -279,7 +286,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="₹1,240"
+                android:text="1,240"
                 android:textColor="@color/black"
                 android:textSize="22sp"
                 android:textStyle="bold"
@@ -300,7 +307,7 @@
 
             <LinearLayout
                 android:id="@+id/paymentInputLayout"
-                android:layout_width="160dp"
+                android:layout_width="120dp"
                 android:layout_height="48dp"
                 android:layout_marginTop="16dp"
                 android:background="@drawable/bg_payment_input"
@@ -310,17 +317,9 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/totalDueLabel">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="₹"
-                    android:textColor="@color/text_grey"
-                    android:textSize="16sp" />
-
                 <EditText
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
                     android:background="@android:color/transparent"
                     android:gravity="end"
                     android:hint="0"
@@ -353,7 +352,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="₹240"
+                    android:text="240"
                     android:textColor="@color/primary_green"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -377,9 +376,11 @@
                 android:backgroundTint="@color/primary_green"
                 android:text="Save Bill"
                 android:textAllCaps="false"
+                android:textColor="@color/white"
                 android:textSize="16sp"
                 app:cornerRadius="12dp"
-                app:icon="@android:drawable/checkbox_on_background" />
+                app:icon="@drawable/ic_check_circle"
+                app:iconTint="@color/white" />
 
             <com.google.android.material.button.MaterialButton
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"

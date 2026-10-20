@@ -8,4 +8,12 @@
         android:id="@+id/nav_customers"
         android:icon="@android:drawable/ic_menu_myplaces"
         android:title="Customers" />
+    <item
+        android:id="@+id/nav_history"
+        android:icon="@android:drawable/ic_menu_recent_history"
+        android:title="History" />
+    <item
+        android:id="@+id/nav_items"
+        android:icon="@android:drawable/ic_menu_manage"
+        android:title="Items" />
 </menu>

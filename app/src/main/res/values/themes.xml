@@ -6,4 +6,8 @@
     </style>
 
     <style name="Theme.BakeDashTest" parent="Base.Theme.BakeDashTest" />
+
+    <style name="App.BottomNavigation.ActiveIndicator" parent="">
+        <item name="android:color">@color/primary_green_light</item>
+    </style>
 </resources>

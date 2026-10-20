@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">BakeDash test</string>
+    <string name="delivery_date_format">Delivery &amp; billing  •  %1$s</string>
+    <string name="customer_count">%1$d customers</string>
 </resources>

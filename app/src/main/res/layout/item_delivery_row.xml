@@ -28,7 +28,7 @@
             android:id="@+id/itemPrice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="₹40 / loaf"
+            android:text="40 / loaf"
             android:textColor="@color/text_grey"
             android:textSize="12sp" />
     </LinearLayout>
@@ -78,7 +78,7 @@
         android:layout_width="80dp"
         android:layout_height="wrap_content"
         android:gravity="end"
-        android:text="₹240"
+        android:text="240"
         android:textColor="@color/black"
         android:textSize="16sp"
         android:textStyle="bold"
