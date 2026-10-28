@@ -17,10 +17,16 @@ import android.widget.Toast;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 import android.database.Cursor;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.view.View;
 import android.widget.LinearLayout;
 
 public class MainActivity extends AppCompatActivity {
@@ -43,6 +49,11 @@ public class MainActivity extends AppCompatActivity {
     private View selectedCustomerCard;
     private TextView selectedAvatar, selectedCustomerName, selectedStoreName, selectedDueAmount;
     private int selectedCustomerId = -1;
+    private LinearLayout llDeliveryItemsList;
+    private TextView tvDeliveryTotal, tvPrevArrears, tvTotalDue, tvRemainingBalance;
+    private EditText etPaymentAmount;
+    private Map<Integer, Integer> deliveryQuantities = new HashMap<>();
+    private Map<Integer, Double> itemPrices = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,10 +98,20 @@ public class MainActivity extends AppCompatActivity {
         selectedCustomerName = findViewById(R.id.selectedCustomerName);
         selectedStoreName = findViewById(R.id.selectedStoreName);
         selectedDueAmount = findViewById(R.id.selectedDueAmount);
+        llDeliveryItemsList = findViewById(R.id.llDeliveryItemsList);
+        tvDeliveryTotal = findViewById(R.id.tvDeliveryTotal);
+        tvPrevArrears = findViewById(R.id.tvPrevArrears);
+        tvTotalDue = findViewById(R.id.tvTotalDue);
+        tvRemainingBalance = findViewById(R.id.tvRemainingBalance);
+        etPaymentAmount = findViewById(R.id.etPaymentAmount);
 
         setupDeliverySearch();
+        setupPaymentInput();
 
         updateDeliveryDate();
+
+        // Initial load for delivery items
+        refreshDeliveryItems();
 
         bottomNav.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
@@ -103,6 +124,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (itemId == R.id.nav_delivery) {
                 deliveryLayout.setVisibility(View.VISIBLE);
+                refreshDeliveryItems();
                 return true;
             } else if (itemId == R.id.nav_customers) {
                 customersLayout.setVisibility(View.VISIBLE);
@@ -368,6 +390,163 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void refreshDeliveryItems() {
+        if (llDeliveryItemsList == null) return;
+        llDeliveryItemsList.removeAllViews();
+        deliveryQuantities.clear();
+        itemPrices.clear();
+
+        Cursor cursor = dbHelper.getAllItems();
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
+                String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
+                double ourPrice = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OUR_PRICE));
+
+                itemPrices.put(id, ourPrice);
+                deliveryQuantities.put(id, 0);
+
+                View row = LayoutInflater.from(this).inflate(R.layout.item_delivery_row, llDeliveryItemsList, false);
+                setupDeliveryItemRow(row, id, name, ourPrice);
+                llDeliveryItemsList.addView(row);
+
+                // Add a divider
+                View divider = new View(this);
+                divider.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1));
+                divider.setBackgroundColor(getResources().getColor(R.color.divider_grey, getTheme()));
+                LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) divider.getLayoutParams();
+                params.setMargins(0, 32, 0, 32);
+                llDeliveryItemsList.addView(divider);
+
+            } while (cursor.moveToNext());
+            cursor.close();
+        }
+        updateDeliveryTotals();
+    }
+
+    private void setupDeliveryItemRow(View row, int id, String name, double price) {
+        TextView tvName = row.findViewById(R.id.itemName);
+        TextView tvPriceDisplay = row.findViewById(R.id.itemPriceDisplay);
+        TextView tvQuantity = row.findViewById(R.id.quantity);
+        TextView tvTotal = row.findViewById(R.id.itemTotal);
+        View btnMinus = row.findViewById(R.id.btnMinus);
+        View btnPlus = row.findViewById(R.id.btnPlus);
+
+        tvName.setText(name);
+        if (tvPriceDisplay != null) {
+            tvPriceDisplay.setText("Price: " + (int) price);
+        }
+        tvQuantity.setText("0");
+        tvTotal.setText(String.valueOf((int) price));
+
+        btnPlus.setOnClickListener(v -> {
+            int qty = deliveryQuantities.get(id) + 5;
+            deliveryQuantities.put(id, qty);
+            tvQuantity.setText(String.valueOf(qty));
+            tvTotal.setText(String.valueOf((int) (qty * price)));
+            updateDeliveryTotals();
+        });
+
+        // 3-second long press reset logic
+        final Handler handler = new Handler(Looper.getMainLooper());
+        final Runnable resetRunnable = () -> {
+            deliveryQuantities.put(id, 0);
+            tvQuantity.setText("0");
+            tvTotal.setText(String.valueOf((int) price));
+            updateDeliveryTotals();
+            Toast.makeText(MainActivity.this, name + " reset to 0", Toast.LENGTH_SHORT).show();
+        };
+
+        btnMinus.setOnTouchListener((v, event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    handler.postDelayed(resetRunnable, 3000);
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    handler.removeCallbacks(resetRunnable);
+                    break;
+            }
+            return false;
+        });
+
+        btnMinus.setOnClickListener(v -> {
+            int qty = deliveryQuantities.get(id);
+            if (qty > 0) {
+                qty--;
+                deliveryQuantities.put(id, qty);
+                tvQuantity.setText(String.valueOf(qty));
+                if (qty == 0) {
+                    tvTotal.setText(String.valueOf((int) price));
+                } else {
+                    tvTotal.setText(String.valueOf((int) (qty * price)));
+                }
+                updateDeliveryTotals();
+            }
+        });
+    }
+
+    private void updateDeliveryTotals() {
+        double deliveryTotal = 0;
+        for (Integer id : deliveryQuantities.keySet()) {
+            deliveryTotal += deliveryQuantities.get(id) * itemPrices.get(id);
+        }
+
+        tvDeliveryTotal.setText(String.valueOf((int) deliveryTotal));
+
+        double arrears = 0;
+        if (selectedCustomerId != -1) {
+            // In a real app, we'd fetch the latest arrears from DB. 
+            // For now, we use the value displayed in the selected customer card.
+            try {
+                arrears = Double.parseDouble(selectedDueAmount.getText().toString());
+            } catch (Exception e) {
+                arrears = 0;
+            }
+        }
+        tvPrevArrears.setText(String.valueOf((int) arrears));
+        
+        double totalDue = deliveryTotal + arrears;
+        tvTotalDue.setText(String.valueOf((int) totalDue));
+        
+        updateRemainingBalance();
+    }
+
+    private void setupPaymentInput() {
+        if (etPaymentAmount == null) return;
+        etPaymentAmount.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                updateRemainingBalance();
+            }
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        });
+    }
+
+    private void updateRemainingBalance() {
+        double totalDue;
+        try {
+            totalDue = Double.parseDouble(tvTotalDue.getText().toString());
+        } catch (Exception e) {
+            totalDue = 0;
+        }
+
+        double payment;
+        try {
+            payment = Double.parseDouble(etPaymentAmount.getText().toString());
+        } catch (Exception e) {
+            payment = 0;
+        }
+
+        double remaining = totalDue - payment;
+        tvRemainingBalance.setText(String.valueOf((int) remaining));
+    }
+
     private void setupDeliverySearch() {
         if (etCustomerSearch == null) return;
 
@@ -446,6 +625,9 @@ public class MainActivity extends AppCompatActivity {
         selectedCustomerName.setText(firstName + " " + lastName);
         selectedStoreName.setText(storeName);
         selectedDueAmount.setText(String.valueOf((int) oldBill));
+        
+        // Trigger billing update when customer is selected
+        updateDeliveryTotals();
     }
 
     private void refreshCustomers() {
