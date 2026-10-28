@@ -69,17 +69,11 @@
         app:layout_constraintTop_toBottomOf="@id/searchContainer">
 
         <LinearLayout
+            android:id="@+id/llItemsList"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingHorizontal="20dp">
-
-            <include layout="@layout/item_product_row" android:id="@+id/item1"/>
-            <include layout="@layout/item_product_row" android:id="@+id/item2"/>
-            <include layout="@layout/item_product_row" android:id="@+id/item3"/>
-            <include layout="@layout/item_product_row" android:id="@+id/item4"/>
-            <include layout="@layout/item_product_row" android:id="@+id/item5"/>
-
         </LinearLayout>
     </ScrollView>
 

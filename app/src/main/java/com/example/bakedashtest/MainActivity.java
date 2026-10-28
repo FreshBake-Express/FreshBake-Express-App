@@ -26,25 +26,28 @@ import android.widget.LinearLayout;
 public class MainActivity extends AppCompatActivity {
 
     private DatabaseHelper dbHelper;
-    private LinearLayout llCustomerList;
+    private LinearLayout llCustomerList, llItemsList;
     private TextView tvCustomerCount;
     private int editingCustomerId = -1;
+    private int editingItemId = -1;
     private TextView tvAddCustomerTitle;
     private BottomNavigationView bottomNav;
 
     // Form fields
     private EditText etFirstName, etLastName, etStoreName, etContactNumber, etAddress, etOldBillAmount;
+    private EditText etItemName, etOurPrice, etShopPrice;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this,
-                SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+                SystemBarStyle.dark(getResources().getColor(R.color.primary_green, getTheme())),
                 SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT));
         setContentView(R.layout.activity_main);
 
         dbHelper = new DatabaseHelper(this);
         llCustomerList = findViewById(R.id.llCustomerList);
+        llItemsList = findViewById(R.id.llItemsList);
         tvCustomerCount = findViewById(R.id.tvCustomerCount);
         tvAddCustomerTitle = findViewById(R.id.tvAddCustomerTitle);
         bottomNav = findViewById(R.id.bottomNavigation);
@@ -63,6 +66,11 @@ public class MainActivity extends AppCompatActivity {
         etContactNumber = findViewById(R.id.etContactNumber);
         etAddress = findViewById(R.id.etAddress);
         etOldBillAmount = findViewById(R.id.etOldBillAmount);
+
+        // Add Item Form Fields
+        etItemName = findViewById(R.id.etItemName);
+        etOurPrice = findViewById(R.id.etOurPrice);
+        etShopPrice = findViewById(R.id.etShopPrice);
 
         updateDeliveryDate();
 
@@ -174,6 +182,11 @@ public class MainActivity extends AppCompatActivity {
 
         // Add Item Flow
         findViewById(R.id.btnAddItem).setOnClickListener(v -> {
+            editingItemId = -1;
+            etItemName.setText("");
+            etOurPrice.setText("");
+            etShopPrice.setText("");
+            
             itemsLayout.setVisibility(View.GONE);
             addItemLayout.setVisibility(View.VISIBLE);
             bottomNav.setVisibility(View.GONE);
@@ -186,13 +199,54 @@ public class MainActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.saveItemButton).setOnClickListener(v -> {
-            // Logic to save item would go here
-            addItemLayout.setVisibility(View.GONE);
-            itemsLayout.setVisibility(View.VISIBLE);
-            bottomNav.setVisibility(View.VISIBLE);
+            String itemName = etItemName.getText().toString().trim();
+            String ourPriceStr = etOurPrice.getText().toString().trim();
+            String shopPriceStr = etShopPrice.getText().toString().trim();
+
+            if (itemName.isEmpty() || ourPriceStr.isEmpty() || shopPriceStr.isEmpty()) {
+                Toast.makeText(this, "Please fill all required fields", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            double ourPrice;
+            double shopPrice;
+            try {
+                ourPrice = Double.parseDouble(ourPriceStr);
+                shopPrice = Double.parseDouble(shopPriceStr);
+            } catch (NumberFormatException e) {
+                Toast.makeText(this, "Please enter valid prices", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            long result;
+            if (editingItemId == -1) {
+                result = dbHelper.addItem(itemName, ourPrice, shopPrice);
+            } else {
+                result = dbHelper.updateItem(editingItemId, itemName, ourPrice, shopPrice);
+            }
+
+            if (result != -1) {
+                Toast.makeText(this, editingItemId == -1 ? "Item Saved Successfully" : "Item Updated Successfully", Toast.LENGTH_SHORT).show();
+                
+                // Clear the form
+                etItemName.setText("");
+                etOurPrice.setText("");
+                etShopPrice.setText("");
+                editingItemId = -1;
+
+                // Refresh the items list
+                refreshItems();
+
+                // Dismiss screen and open Manage Items view
+                addItemLayout.setVisibility(View.GONE);
+                itemsLayout.setVisibility(View.VISIBLE);
+                bottomNav.setVisibility(View.VISIBLE);
+            } else {
+                Toast.makeText(this, "Error saving item", Toast.LENGTH_SHORT).show();
+            }
         });
 
-        setupItemsList();
+        refreshItems();
         refreshCustomers();
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -210,22 +264,49 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void setupItemsList() {
-        setupProductRow(findViewById(R.id.item1), "Bread", "35", "40");
-        setupProductRow(findViewById(R.id.item2), "Butter Cookies", "100", "120");
-        setupProductRow(findViewById(R.id.item3), "Chocolate Cake", "400", "450");
-        setupProductRow(findViewById(R.id.item4), "Milk Bread", "38", "45");
-        setupProductRow(findViewById(R.id.item5), "Fruit Jam", "75", "85");
+    private void refreshItems() {
+        if (llItemsList == null) return;
+        llItemsList.removeAllViews();
+
+        Cursor cursor = dbHelper.getAllItems();
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
+                String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
+                double ourPrice = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OUR_PRICE));
+                double shopPrice = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_SHOP_PRICE));
+
+                View row = LayoutInflater.from(this).inflate(R.layout.item_product_row, llItemsList, false);
+                setupProductRow(row, id, name, String.valueOf((int)ourPrice), String.valueOf((int)shopPrice));
+                llItemsList.addView(row);
+            } while (cursor.moveToNext());
+            cursor.close();
+        }
     }
 
-    private void setupProductRow(View row, String name, String ourPrice, String shopPrice) {
+    private void setupProductRow(View row, int id, String name, String ourPrice, String shopPrice) {
         if (row == null) return;
         android.widget.TextView tvName = row.findViewById(R.id.productName);
         android.widget.TextView tvOurPrice = row.findViewById(R.id.ourPrice);
         android.widget.TextView tvShopPrice = row.findViewById(R.id.shopPrice);
+        View editIcon = row.findViewById(R.id.editIcon);
+
         if (tvName != null) tvName.setText(name);
         if (tvOurPrice != null) tvOurPrice.setText(ourPrice);
         if (tvShopPrice != null) tvShopPrice.setText(shopPrice);
+
+        if (editIcon != null) {
+            editIcon.setOnClickListener(v -> {
+                editingItemId = id;
+                etItemName.setText(name);
+                etOurPrice.setText(ourPrice);
+                etShopPrice.setText(shopPrice);
+
+                findViewById(R.id.itemsLayout).setVisibility(View.GONE);
+                findViewById(R.id.addItemLayout).setVisibility(View.VISIBLE);
+                if (bottomNav != null) bottomNav.setVisibility(View.GONE);
+            });
+        }
     }
 
     private void setupCustomerRow(View row, int id, String avatar, String firstName, String lastName, String store, String phone, String address, double amount, boolean isSelected) {
