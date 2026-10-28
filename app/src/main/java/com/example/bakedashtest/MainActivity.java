@@ -37,6 +37,13 @@ public class MainActivity extends AppCompatActivity {
     private EditText etFirstName, etLastName, etStoreName, etContactNumber, etAddress, etOldBillAmount;
     private EditText etItemName, etOurPrice, etShopPrice;
 
+    // Delivery Search and Selected Customer
+    private EditText etCustomerSearch;
+    private LinearLayout llSearchResults;
+    private View selectedCustomerCard;
+    private TextView selectedAvatar, selectedCustomerName, selectedStoreName, selectedDueAmount;
+    private int selectedCustomerId = -1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -71,6 +78,17 @@ public class MainActivity extends AppCompatActivity {
         etItemName = findViewById(R.id.etItemName);
         etOurPrice = findViewById(R.id.etOurPrice);
         etShopPrice = findViewById(R.id.etShopPrice);
+
+        // Delivery Section Fields
+        etCustomerSearch = findViewById(R.id.etCustomerSearch);
+        llSearchResults = findViewById(R.id.llSearchResults);
+        selectedCustomerCard = findViewById(R.id.selectedCustomerCard);
+        selectedAvatar = findViewById(R.id.selectedAvatar);
+        selectedCustomerName = findViewById(R.id.selectedCustomerName);
+        selectedStoreName = findViewById(R.id.selectedStoreName);
+        selectedDueAmount = findViewById(R.id.selectedDueAmount);
+
+        setupDeliverySearch();
 
         updateDeliveryDate();
 
@@ -348,6 +366,86 @@ public class MainActivity extends AppCompatActivity {
                 if (bottomNav != null) bottomNav.setVisibility(View.GONE);
             });
         }
+    }
+
+    private void setupDeliverySearch() {
+        if (etCustomerSearch == null) return;
+
+        etCustomerSearch.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String query = s.toString().trim();
+                if (query.length() >= 1) {
+                    performCustomerSearch(query);
+                } else {
+                    llSearchResults.setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        });
+    }
+
+    private void performCustomerSearch(String query) {
+        llSearchResults.removeAllViews();
+        Cursor cursor = dbHelper.searchCustomers(query);
+        
+        if (cursor != null && cursor.moveToFirst()) {
+            llSearchResults.setVisibility(View.VISIBLE);
+            int count = 0;
+            do {
+                int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
+                String firstName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_FIRST_NAME));
+                String lastName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_LAST_NAME));
+                String storeName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_STORE_NAME));
+                double oldBill = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OLD_BILL));
+
+                View itemView = LayoutInflater.from(this).inflate(R.layout.item_search_result, llSearchResults, false);
+                TextView textName = itemView.findViewById(R.id.textName);
+                TextView textStore = itemView.findViewById(R.id.textStore);
+
+                textName.setText(firstName + " " + lastName);
+                textStore.setText(storeName);
+                
+                itemView.setOnClickListener(v -> {
+                    selectCustomer(id, firstName, lastName, storeName, oldBill);
+                    llSearchResults.setVisibility(View.GONE);
+                    etCustomerSearch.setText("");
+                });
+
+                llSearchResults.addView(itemView);
+                
+                // Add a divider
+                View divider = new View(this);
+                divider.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1));
+                divider.setBackgroundColor(Color.LTGRAY);
+                llSearchResults.addView(divider);
+
+                count++;
+                if (count >= 5) break; // Limit results
+            } while (cursor.moveToNext());
+            cursor.close();
+        } else {
+            llSearchResults.setVisibility(View.GONE);
+        }
+    }
+
+    private void selectCustomer(int id, String firstName, String lastName, String storeName, double oldBill) {
+        selectedCustomerId = id;
+        selectedCustomerCard.setVisibility(View.VISIBLE);
+        
+        String initials = "";
+        if (firstName.length() > 0) initials += firstName.charAt(0);
+        if (lastName.length() > 0) initials += lastName.charAt(0);
+        
+        selectedAvatar.setText(initials.toUpperCase());
+        selectedCustomerName.setText(firstName + " " + lastName);
+        selectedStoreName.setText(storeName);
+        selectedDueAmount.setText(String.valueOf((int) oldBill));
     }
 
     private void refreshCustomers() {

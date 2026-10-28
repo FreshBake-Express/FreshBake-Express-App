@@ -34,37 +34,56 @@
         <!-- Search Bar -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:background="@drawable/bg_search"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingHorizontal="16dp">
+            android:orientation="vertical">
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@android:drawable/ic_menu_search"
-                app:tint="@color/text_grey" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:background="@drawable/bg_search"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp">
 
-            <EditText
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/ic_menu_search"
+                    app:tint="@color/text_grey" />
+
+                <EditText
+                    android:id="@+id/etCustomerSearch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:background="@android:color/transparent"
+                    android:hint="Search existing customer or store"
+                    android:inputType="text"
+                    android:textColor="#1E293B"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <!-- Search Results -->
+            <LinearLayout
+                android:id="@+id/llSearchResults"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:background="@android:color/transparent"
-                android:hint="Search existing customer or store"
-                android:inputType="text"
-                android:textColor="#1E293B"
-                android:textSize="16sp" />
+                android:background="@drawable/bg_customer_card_white"
+                android:elevation="4dp"
+                android:orientation="vertical"
+                android:visibility="gone" />
         </LinearLayout>
 
         <!-- Customer Card -->
         <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/selectedCustomerCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:background="@drawable/bg_customer_card"
-            android:padding="16dp">
+            android:padding="16dp"
+            android:visibility="gone">
 
             <ImageView
                 android:id="@+id/selectedStatusIcon"
@@ -78,7 +97,7 @@
                 app:tint="@color/primary_green" />
 
             <TextView
-                android:id="@+id/avatar"
+                android:id="@+id/selectedAvatar"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="@drawable/bg_search"
@@ -92,7 +111,7 @@
                 app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
-                android:id="@+id/customerName"
+                android:id="@+id/selectedCustomerName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -100,17 +119,18 @@
                 android:textColor="@color/black"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                app:layout_constraintStart_toEndOf="@id/avatar"
-                app:layout_constraintTop_toTopOf="@id/avatar" />
+                app:layout_constraintStart_toEndOf="@id/selectedAvatar"
+                app:layout_constraintTop_toTopOf="@id/selectedAvatar" />
 
             <TextView
+                android:id="@+id/selectedStoreName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Sunrise Grocery"
                 android:textColor="@color/text_grey"
                 android:textSize="14sp"
-                app:layout_constraintStart_toStartOf="@id/customerName"
-                app:layout_constraintTop_toBottomOf="@id/customerName" />
+                app:layout_constraintStart_toStartOf="@id/selectedCustomerName"
+                app:layout_constraintTop_toBottomOf="@id/selectedCustomerName" />
 
 
 
@@ -122,9 +142,10 @@
                 android:textColor="@color/text_grey"
                 android:textSize="14sp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/avatar" />
+                app:layout_constraintTop_toBottomOf="@id/selectedAvatar" />
 
             <TextView
+                android:id="@+id/selectedDueAmount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="450"
