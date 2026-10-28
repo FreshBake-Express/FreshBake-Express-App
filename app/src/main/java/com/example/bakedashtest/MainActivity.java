@@ -27,6 +27,9 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.graphics.Rect;
+import android.content.Context;
 import android.widget.LinearLayout;
 
 public class MainActivity extends AppCompatActivity {
@@ -50,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView selectedAvatar, selectedCustomerName, selectedStoreName, selectedDueAmount;
     private int selectedCustomerId = -1;
     private LinearLayout llDeliveryItemsList;
+    private View cardPaymentDetails, rlDeliveryTotal, llDeliveryButtons;
     private TextView tvDeliveryTotal, tvPrevArrears, tvTotalDue, tvRemainingBalance;
     private EditText etPaymentAmount;
     private Map<Integer, Integer> deliveryQuantities = new HashMap<>();
@@ -99,6 +103,9 @@ public class MainActivity extends AppCompatActivity {
         selectedStoreName = findViewById(R.id.selectedStoreName);
         selectedDueAmount = findViewById(R.id.selectedDueAmount);
         llDeliveryItemsList = findViewById(R.id.llDeliveryItemsList);
+        cardPaymentDetails = findViewById(R.id.cardPaymentDetails);
+        rlDeliveryTotal = findViewById(R.id.rlDeliveryTotal);
+        llDeliveryButtons = findViewById(R.id.llDeliveryButtons);
         tvDeliveryTotal = findViewById(R.id.tvDeliveryTotal);
         tvPrevArrears = findViewById(R.id.tvPrevArrears);
         tvTotalDue = findViewById(R.id.tvTotalDue);
@@ -437,7 +444,7 @@ public class MainActivity extends AppCompatActivity {
             tvPriceDisplay.setText("Price: " + (int) price);
         }
         tvQuantity.setText("0");
-        tvTotal.setText(String.valueOf((int) price));
+        tvTotal.setText("0");
 
         btnPlus.setOnClickListener(v -> {
             int qty = deliveryQuantities.get(id) + 5;
@@ -452,7 +459,7 @@ public class MainActivity extends AppCompatActivity {
         final Runnable resetRunnable = () -> {
             deliveryQuantities.put(id, 0);
             tvQuantity.setText("0");
-            tvTotal.setText(String.valueOf((int) price));
+            tvTotal.setText("0");
             updateDeliveryTotals();
             Toast.makeText(MainActivity.this, name + " reset to 0", Toast.LENGTH_SHORT).show();
         };
@@ -477,7 +484,7 @@ public class MainActivity extends AppCompatActivity {
                 deliveryQuantities.put(id, qty);
                 tvQuantity.setText(String.valueOf(qty));
                 if (qty == 0) {
-                    tvTotal.setText(String.valueOf((int) price));
+                    tvTotal.setText("0");
                 } else {
                     tvTotal.setText(String.valueOf((int) (qty * price)));
                 }
@@ -493,6 +500,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         tvDeliveryTotal.setText(String.valueOf((int) deliveryTotal));
+
+        // Keep payment details and buttons visible
+        int visibility = View.VISIBLE;
+        if (cardPaymentDetails != null) cardPaymentDetails.setVisibility(visibility);
+        if (rlDeliveryTotal != null) rlDeliveryTotal.setVisibility(visibility);
+        if (llDeliveryButtons != null) llDeliveryButtons.setVisibility(visibility);
 
         double arrears = 0;
         if (selectedCustomerId != -1) {
@@ -659,5 +672,22 @@ public class MainActivity extends AppCompatActivity {
             } while (cursor.moveToNext());
             cursor.close();
         }
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            View v = getCurrentFocus();
+            if (v instanceof EditText) {
+                Rect outRect = new Rect();
+                v.getGlobalVisibleRect(outRect);
+                if (!outRect.contains((int)event.getRawX(), (int)event.getRawY())) {
+                    v.clearFocus();
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+                }
+            }
+        }
+        return super.dispatchTouchEvent(event);
     }
 }
