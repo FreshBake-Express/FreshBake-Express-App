@@ -180,29 +180,13 @@
                 android:textSize="12sp" />
         </RelativeLayout>
 
-        <!-- Item List (Simulated) -->
-        <include layout="@layout/item_delivery_row"
+        <!-- Item List (Dynamic) -->
+        <LinearLayout
+            android:id="@+id/llDeliveryItemsList"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp" />
-
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider_grey" android:layout_marginVertical="12dp" />
-
-        <include layout="@layout/item_delivery_row"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider_grey" android:layout_marginVertical="12dp" />
-
-        <include layout="@layout/item_delivery_row"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider_grey" android:layout_marginVertical="12dp" />
-
-        <include layout="@layout/item_delivery_row"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_marginTop="16dp"
+            android:orientation="vertical" />
 
         <!-- Delivery Total -->
         <RelativeLayout
@@ -220,10 +204,11 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/tvDeliveryTotal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
-                android:text="790"
+                android:text="0"
                 android:textColor="@color/black"
                 android:textSize="22sp"
                 android:textStyle="bold" />
@@ -283,9 +268,10 @@
                 app:layout_constraintTop_toBottomOf="@id/paymentDetailsTitle" />
 
             <TextView
+                android:id="@+id/tvPrevArrears"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="450"
+                android:text="0"
                 android:textColor="@color/black"
                 android:textSize="16sp"
                 android:textStyle="bold"
@@ -305,9 +291,10 @@
                 app:layout_constraintTop_toBottomOf="@id/prevArrearsLabel" />
 
             <TextView
+                android:id="@+id/tvTotalDue"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="1,240"
+                android:text="0"
                 android:textColor="@color/black"
                 android:textSize="22sp"
                 android:textStyle="bold"
@@ -339,13 +326,14 @@
                 app:layout_constraintTop_toBottomOf="@id/totalDueLabel">
 
                 <EditText
+                    android:id="@+id/etPaymentAmount"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@android:color/transparent"
                     android:gravity="end"
                     android:hint="0"
                     android:inputType="number"
-                    android:text="1,000"
+                    android:text="0"
                     android:textColor="@color/black"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -371,9 +359,10 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/tvRemainingBalance"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="240"
+                    android:text="0"
                     android:textColor="@color/primary_green"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -390,6 +379,7 @@
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSaveBill"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_marginEnd="8dp"
@@ -404,6 +394,7 @@
                 app:iconTint="@color/white" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPrintBill"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
