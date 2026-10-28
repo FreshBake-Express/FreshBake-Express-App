@@ -59,6 +59,13 @@ public class MainActivity extends AppCompatActivity {
     private Map<Integer, Integer> deliveryQuantities = new HashMap<>();
     private Map<Integer, Double> itemPrices = new HashMap<>();
 
+    // History Section Fields
+    private TextView tvStatRevenue, tvStatBills, tvStatDue, tvStatDueStores;
+    private TextView tabItemWise, tabCustomerWise;
+    private TextView tvListHeader, tvListCount;
+    private LinearLayout llHistoryList;
+    private boolean isItemWise = true;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -112,6 +119,32 @@ public class MainActivity extends AppCompatActivity {
         tvRemainingBalance = findViewById(R.id.tvRemainingBalance);
         etPaymentAmount = findViewById(R.id.etPaymentAmount);
 
+        // History Section Initializations
+        tvStatRevenue = findViewById(R.id.tvStatRevenue);
+        tvStatBills = findViewById(R.id.tvStatBills);
+        tvStatDue = findViewById(R.id.tvStatDue);
+        tvStatDueStores = findViewById(R.id.tvStatDueStores);
+        tabItemWise = findViewById(R.id.tabItemWise);
+        tabCustomerWise = findViewById(R.id.tabCustomerWise);
+        tvListHeader = findViewById(R.id.tvListHeader);
+        tvListCount = findViewById(R.id.tvListCount);
+        llHistoryList = findViewById(R.id.llHistoryList);
+
+        if (tabItemWise != null) {
+            tabItemWise.setOnClickListener(v -> {
+                isItemWise = true;
+                updateHistoryTabs();
+                refreshHistory();
+            });
+        }
+        if (tabCustomerWise != null) {
+            tabCustomerWise.setOnClickListener(v -> {
+                isItemWise = false;
+                updateHistoryTabs();
+                refreshHistory();
+            });
+        }
+
         setupDeliverySearch();
         setupPaymentInput();
 
@@ -138,6 +171,7 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             } else if (itemId == R.id.nav_history) {
                 historyLayout.setVisibility(View.VISIBLE);
+                refreshHistory();
                 return true;
             } else if (itemId == R.id.nav_items) {
                 itemsLayout.setVisibility(View.VISIBLE);
@@ -145,6 +179,8 @@ public class MainActivity extends AppCompatActivity {
             }
             return false;
         });
+
+        findViewById(R.id.btnSaveBill).setOnClickListener(v -> saveCurrentBill());
 
         // Add Customer Flow
         findViewById(R.id.btnCreateCustomer).setOnClickListener(v -> {
@@ -672,6 +708,176 @@ public class MainActivity extends AppCompatActivity {
             } while (cursor.moveToNext());
             cursor.close();
         }
+    }
+
+    private void saveCurrentBill() {
+        if (selectedCustomerId == -1) {
+            Toast.makeText(this, "Please select a customer first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        double deliveryTotal = 0;
+        boolean hasItems = false;
+        for (Integer qty : deliveryQuantities.values()) {
+            if (qty > 0) {
+                hasItems = true;
+                break;
+            }
+        }
+
+        if (!hasItems) {
+            Toast.makeText(this, "Please add items to delivery", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            deliveryTotal = Double.parseDouble(tvDeliveryTotal.getText().toString());
+            double arrears = Double.parseDouble(tvPrevArrears.getText().toString());
+            double totalDue = Double.parseDouble(tvTotalDue.getText().toString());
+            String paymentStr = etPaymentAmount.getText().toString().trim();
+            double paid = paymentStr.isEmpty() ? 0 : Double.parseDouble(paymentStr);
+            double remaining = totalDue - paid;
+
+            String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+
+            long orderId = dbHelper.saveOrder(selectedCustomerId, date, deliveryTotal, paid, remaining, deliveryQuantities, itemPrices);
+
+            if (orderId != -1) {
+                // Update customer's old_bill (arrears) in the database
+                dbHelper.updateCustomerDue(selectedCustomerId, remaining);
+
+                Toast.makeText(this, "Bill saved successfully!", Toast.LENGTH_SHORT).show();
+                
+                // Reset delivery screen
+                selectedCustomerId = -1;
+                selectedCustomerCard.setVisibility(View.GONE);
+                etCustomerSearch.setText("");
+                etPaymentAmount.setText("");
+                refreshDeliveryItems();
+                refreshCustomers();
+            } else {
+                Toast.makeText(this, "Failed to save bill", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void updateHistoryTabs() {
+        if (tabItemWise == null || tabCustomerWise == null) return;
+
+        if (isItemWise) {
+            tabItemWise.setBackgroundResource(R.drawable.bg_tab_selected);
+            tabItemWise.setTextColor(getResources().getColor(R.color.revenue_text, getTheme()));
+            tabItemWise.setTypeface(null, android.graphics.Typeface.BOLD);
+
+            tabCustomerWise.setBackground(null);
+            tabCustomerWise.setTextColor(getResources().getColor(R.color.text_grey, getTheme()));
+            tabCustomerWise.setTypeface(null, android.graphics.Typeface.NORMAL);
+            
+            tvListHeader.setText("TOP MOVING ITEMS");
+        } else {
+            tabCustomerWise.setBackgroundResource(R.drawable.bg_tab_selected);
+            tabCustomerWise.setTextColor(getResources().getColor(R.color.revenue_text, getTheme()));
+            tabCustomerWise.setTypeface(null, android.graphics.Typeface.BOLD);
+
+            tabItemWise.setBackground(null);
+            tabItemWise.setTextColor(getResources().getColor(R.color.text_grey, getTheme()));
+            tabItemWise.setTypeface(null, android.graphics.Typeface.NORMAL);
+            
+            tvListHeader.setText("DELIVERED STORES");
+        }
+    }
+
+    private void refreshHistory() {
+        updateStats();
+        llHistoryList.removeAllViews();
+        if (isItemWise) {
+            populateItemWiseList();
+        } else {
+            populateCustomerWiseList();
+        }
+    }
+
+    private void updateStats() {
+        Cursor cursor = dbHelper.getTodayStats();
+        if (cursor != null && cursor.moveToFirst()) {
+            double revenue = cursor.getDouble(cursor.getColumnIndexOrThrow("total_revenue"));
+            int bills = cursor.getInt(cursor.getColumnIndexOrThrow("total_bills"));
+            double due = cursor.getDouble(cursor.getColumnIndexOrThrow("total_due"));
+            int pendingStores = cursor.getInt(cursor.getColumnIndexOrThrow("pending_stores"));
+
+            tvStatRevenue.setText("₹" + (int)revenue);
+            tvStatBills.setText(String.valueOf(bills));
+            tvStatDue.setText("₹" + (int)due);
+            tvStatDueStores.setText(pendingStores + " stores pending");
+            cursor.close();
+        }
+    }
+
+    private void populateItemWiseList() {
+        Cursor cursor = dbHelper.getItemWiseSales();
+        int count = 0;
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
+                double price = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OUR_PRICE));
+                int qty = cursor.getInt(cursor.getColumnIndexOrThrow("total_qty"));
+                double total = cursor.getDouble(cursor.getColumnIndexOrThrow("total_price"));
+
+                View row = LayoutInflater.from(this).inflate(R.layout.item_history_item, llHistoryList, false);
+                ((TextView)row.findViewById(R.id.tvItemName)).setText(name);
+                ((TextView)row.findViewById(R.id.tvItemDetails)).setText("₹" + (int)price + " / unit • " + qty + " units");
+                ((TextView)row.findViewById(R.id.tvItemTotal)).setText("₹" + (int)total);
+                
+                llHistoryList.addView(row);
+                count++;
+            } while (cursor.moveToNext());
+            cursor.close();
+        }
+        tvListCount.setText(count + " items sold");
+    }
+
+    private void populateCustomerWiseList() {
+        Cursor cursor = dbHelper.getCustomerWiseSales();
+        int count = 0;
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                String firstName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_FIRST_NAME));
+                String lastName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_LAST_NAME));
+                String storeName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_STORE_NAME));
+                String contact = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_CONTACT));
+                double totalSales = cursor.getDouble(cursor.getColumnIndexOrThrow("total_sales"));
+                double currentDue = cursor.getDouble(cursor.getColumnIndexOrThrow("current_due"));
+
+                View row = LayoutInflater.from(this).inflate(R.layout.item_history_customer, llHistoryList, false);
+                
+                String initials = "";
+                if (firstName.length() > 0) initials += firstName.charAt(0);
+                if (lastName.length() > 0) initials += lastName.charAt(0);
+                
+                ((TextView)row.findViewById(R.id.tvCustomerAvatar)).setText(initials.toUpperCase());
+                ((TextView)row.findViewById(R.id.tvCustomerName)).setText(firstName + " " + lastName);
+                ((TextView)row.findViewById(R.id.tvStoreName)).setText(storeName);
+                ((TextView)row.findViewById(R.id.tvCustomerPhone)).setText(contact);
+                ((TextView)row.findViewById(R.id.tvCustomerTotal)).setText("₹" + (int)totalSales);
+                
+                TextView tvDue = row.findViewById(R.id.tvCustomerDue);
+                if (currentDue > 0) {
+                    tvDue.setText("Due ₹" + (int)currentDue);
+                    tvDue.setVisibility(View.VISIBLE);
+                } else {
+                    tvDue.setText("Settled");
+                    tvDue.setBackgroundResource(R.drawable.bg_filter_unselected);
+                    tvDue.setTextColor(getResources().getColor(R.color.primary_green, getTheme()));
+                }
+
+                llHistoryList.addView(row);
+                count++;
+            } while (cursor.moveToNext());
+            cursor.close();
+        }
+        tvListCount.setText(count + " stores");
     }
 
     @Override

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    android:background="@drawable/bg_stat_bills"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:id="@+id/iconContainer"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/bg_filter_unselected"
+        android:gravity="center"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/ivItemIcon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@android:drawable/ic_menu_gallery"
+            app:tint="@color/primary_green" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvItemName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:text="Bread (Loaf)"
+        android:textColor="@color/text_dark"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toEndOf="@id/iconContainer"
+        app:layout_constraintTop_toTopOf="@id/iconContainer" />
+
+    <TextView
+        android:id="@+id/tvItemDetails"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="₹40 / unit • 120 loaves"
+        android:textColor="@color/text_grey"
+        android:textSize="12sp"
+        app:layout_constraintStart_toStartOf="@id/tvItemName"
+        app:layout_constraintTop_toBottomOf="@id/tvItemName" />
+
+    <TextView
+        android:id="@+id/tvItemTotal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="₹4,800"
+        android:textColor="@color/text_dark"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/tvItemName" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Top Seller"
+        android:textColor="@color/primary_green"
+        android:textSize="10sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvItemTotal" />
+
+    <ProgressBar
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="0dp"
+        android:layout_height="4dp"
+        android:layout_marginTop="8dp"
+        android:progress="70"
+        android:progressTint="@color/primary_green"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/tvItemDetails"
+        app:layout_constraintStart_toStartOf="@id/tvItemDetails"
+        app:layout_constraintTop_toBottomOf="@id/tvItemDetails" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

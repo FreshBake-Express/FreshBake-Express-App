@@ -3,10 +3,17 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="primary_green">#1D5B3A</color>
-    <color name="primary_green_light">#E8F5E9</color>
+    <color name="primary_green_light">#F0F9F4</color>
+    <color name="revenue_bg">#F0F9F4</color>
+    <color name="revenue_text">#1D5B3A</color>
+    <color name="bills_bg">#FFFFFF</color>
+    <color name="due_bg">#FFF9F0</color>
+    <color name="due_text">#B45309</color>
     <color name="light_green_bg">#F2F9F3</color>
     <color name="light_green_border">#D0E7D2</color>
-    <color name="text_grey">#757575</color>
-    <color name="divider_grey">#EEEEEE</color>
-    <color name="item_bg_grey">#F9F9F9</color>
+    <color name="text_grey">#64748B</color>
+    <color name="text_dark">#1E293B</color>
+    <color name="divider_grey">#E2E8F0</color>
+    <color name="item_bg_grey">#F8FAFC</color>
+    <color name="search_bg">#F1F5F9</color>
 </resources>
