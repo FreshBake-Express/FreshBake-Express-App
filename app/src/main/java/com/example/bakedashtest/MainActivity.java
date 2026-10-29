@@ -470,7 +470,7 @@ public class MainActivity extends AppCompatActivity {
     private void setupDeliveryItemRow(View row, int id, String name, double price) {
         TextView tvName = row.findViewById(R.id.itemName);
         TextView tvPriceDisplay = row.findViewById(R.id.itemPriceDisplay);
-        TextView tvQuantity = row.findViewById(R.id.quantity);
+        EditText etQuantity = row.findViewById(R.id.quantity);
         TextView tvTotal = row.findViewById(R.id.itemTotal);
         View btnMinus = row.findViewById(R.id.btnMinus);
         View btnPlus = row.findViewById(R.id.btnPlus);
@@ -479,13 +479,13 @@ public class MainActivity extends AppCompatActivity {
         if (tvPriceDisplay != null) {
             tvPriceDisplay.setText("Price: " + (int) price);
         }
-        tvQuantity.setText("0");
+        etQuantity.setText("0");
         tvTotal.setText("0");
 
         btnPlus.setOnClickListener(v -> {
             int qty = deliveryQuantities.get(id) + 5;
             deliveryQuantities.put(id, qty);
-            tvQuantity.setText(String.valueOf(qty));
+            etQuantity.setText(String.valueOf(qty));
             tvTotal.setText(String.valueOf((int) (qty * price)));
             updateDeliveryTotals();
         });
@@ -494,7 +494,7 @@ public class MainActivity extends AppCompatActivity {
         final Handler handler = new Handler(Looper.getMainLooper());
         final Runnable resetRunnable = () -> {
             deliveryQuantities.put(id, 0);
-            tvQuantity.setText("0");
+            etQuantity.setText("0");
             tvTotal.setText("0");
             updateDeliveryTotals();
             Toast.makeText(MainActivity.this, name + " reset to 0", Toast.LENGTH_SHORT).show();
@@ -518,13 +518,40 @@ public class MainActivity extends AppCompatActivity {
             if (qty > 0) {
                 qty--;
                 deliveryQuantities.put(id, qty);
-                tvQuantity.setText(String.valueOf(qty));
+                etQuantity.setText(String.valueOf(qty));
                 if (qty == 0) {
                     tvTotal.setText("0");
                 } else {
                     tvTotal.setText(String.valueOf((int) (qty * price)));
                 }
                 updateDeliveryTotals();
+            }
+        });
+
+        etQuantity.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                int qty = 0;
+                if (s != null && s.length() > 0) {
+                    try {
+                        qty = Integer.parseInt(s.toString());
+                    } catch (NumberFormatException e) {
+                        qty = 0;
+                    }
+                }
+                
+                // Only update if value actually changed to avoid infinite loops if setText is called
+                if (deliveryQuantities.get(id) != qty) {
+                    deliveryQuantities.put(id, qty);
+                    tvTotal.setText(String.valueOf((int) (qty * price)));
+                    updateDeliveryTotals();
+                }
             }
         });
     }
@@ -807,9 +834,9 @@ public class MainActivity extends AppCompatActivity {
             double due = cursor.getDouble(cursor.getColumnIndexOrThrow("total_due"));
             int pendingStores = cursor.getInt(cursor.getColumnIndexOrThrow("pending_stores"));
 
-            tvStatRevenue.setText("₹" + (int)revenue);
+            tvStatRevenue.setText(String.valueOf((int)revenue));
             tvStatBills.setText(String.valueOf(bills));
-            tvStatDue.setText("₹" + (int)due);
+            tvStatDue.setText(String.valueOf((int)due));
             tvStatDueStores.setText(pendingStores + " stores pending");
             cursor.close();
         }
@@ -827,8 +854,8 @@ public class MainActivity extends AppCompatActivity {
 
                 View row = LayoutInflater.from(this).inflate(R.layout.item_history_item, llHistoryList, false);
                 ((TextView)row.findViewById(R.id.tvItemName)).setText(name);
-                ((TextView)row.findViewById(R.id.tvItemDetails)).setText("₹" + (int)price + " / unit • " + qty + " units");
-                ((TextView)row.findViewById(R.id.tvItemTotal)).setText("₹" + (int)total);
+                ((TextView)row.findViewById(R.id.tvItemDetails)).setText((int)price + " / unit • " + qty + " units");
+                ((TextView)row.findViewById(R.id.tvItemTotal)).setText(String.valueOf((int)total));
                 
                 llHistoryList.addView(row);
                 count++;
@@ -860,11 +887,11 @@ public class MainActivity extends AppCompatActivity {
                 ((TextView)row.findViewById(R.id.tvCustomerName)).setText(firstName + " " + lastName);
                 ((TextView)row.findViewById(R.id.tvStoreName)).setText(storeName);
                 ((TextView)row.findViewById(R.id.tvCustomerPhone)).setText(contact);
-                ((TextView)row.findViewById(R.id.tvCustomerTotal)).setText("₹" + (int)totalSales);
+                ((TextView)row.findViewById(R.id.tvCustomerTotal)).setText(String.valueOf((int)totalSales));
                 
                 TextView tvDue = row.findViewById(R.id.tvCustomerDue);
                 if (currentDue > 0) {
-                    tvDue.setText("Due ₹" + (int)currentDue);
+                    tvDue.setText("Due " + (int)currentDue);
                     tvDue.setVisibility(View.VISIBLE);
                 } else {
                     tvDue.setText("Settled");

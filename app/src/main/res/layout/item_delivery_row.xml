@@ -63,15 +63,21 @@
             android:textSize="22sp"
             android:textStyle="bold" />
 
-        <TextView
+        <EditText
             android:id="@+id/quantity"
-            android:layout_width="40dp"
+            android:layout_width="48dp"
             android:layout_height="match_parent"
+            android:background="@null"
             android:gravity="center"
+            android:imeOptions="actionDone"
+            android:inputType="number"
+            android:selectAllOnFocus="true"
+            android:importantForAutofill="no"
             android:text="0"
             android:textColor="@color/black"
             android:textSize="18sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            tools:ignore="LabelFor" />
 
         <TextView
             android:id="@+id/btnPlus"
