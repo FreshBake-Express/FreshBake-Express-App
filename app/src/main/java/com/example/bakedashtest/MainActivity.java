@@ -72,6 +72,11 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout llTransactionList;
     private int currentBillingCustomerId = -1;
 
+    // Bill Details Fields
+    private View billDetailsLayout;
+    private TextView tvBillDetailStoreName, tvBillDetailDateTime, tvBillDetailOrderId, tvBillDetailSubTotal, tvBillDetailPaid, tvBillDetailDue;
+    private LinearLayout llBillItemsList;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -143,6 +148,25 @@ public class MainActivity extends AppCompatActivity {
         tvTotalCustomerSales = findViewById(R.id.tvTotalCustomerSales);
         tvTotalCustomerDue = findViewById(R.id.tvTotalCustomerDue);
         llTransactionList = findViewById(R.id.llTransactionList);
+
+        // Bill Details Initializations
+        billDetailsLayout = findViewById(R.id.billDetailsLayout);
+        tvBillDetailStoreName = findViewById(R.id.tvBillDetailStoreName);
+        tvBillDetailDateTime = findViewById(R.id.tvBillDetailDateTime);
+        tvBillDetailOrderId = findViewById(R.id.tvBillDetailOrderId);
+        tvBillDetailSubTotal = findViewById(R.id.tvBillDetailSubTotal);
+        tvBillDetailPaid = findViewById(R.id.tvBillDetailPaid);
+        tvBillDetailDue = findViewById(R.id.tvBillDetailDue);
+        llBillItemsList = findViewById(R.id.llBillItemsList);
+
+        findViewById(R.id.btnBackFromBillDetails).setOnClickListener(v -> {
+            billDetailsLayout.setVisibility(View.GONE);
+            customerBillingHistoryLayout.setVisibility(View.VISIBLE);
+        });
+
+        View.OnClickListener printAction = v -> Toast.makeText(this, "Printing functionality coming soon...", Toast.LENGTH_SHORT).show();
+        findViewById(R.id.btnPrintBill).setOnClickListener(printAction);
+        findViewById(R.id.btnBottomPrint).setOnClickListener(printAction);
 
         findViewById(R.id.btnBackFromBillingHistory).setOnClickListener(v -> {
             customerBillingHistoryLayout.setVisibility(View.GONE);
@@ -971,6 +995,8 @@ public class MainActivity extends AppCompatActivity {
                 }
                 ((TextView)row.findViewById(R.id.tvTransactionItems)).setText(itemCount + " items • " + unitCount + " units");
 
+                row.setOnClickListener(v -> showBillDetails(orderId));
+
                 llTransactionList.addView(row);
             } while (cursor.moveToNext());
             cursor.close();
@@ -978,6 +1004,61 @@ public class MainActivity extends AppCompatActivity {
 
         findViewById(R.id.historyLayout).setVisibility(View.GONE);
         customerBillingHistoryLayout.setVisibility(View.VISIBLE);
+    }
+
+    private void showBillDetails(int orderId) {
+        Cursor orderCursor = dbHelper.getReadableDatabase().query(
+                DatabaseHelper.TABLE_ORDERS,
+                null,
+                DatabaseHelper.COLUMN_ID + "=?",
+                new String[]{String.valueOf(orderId)},
+                null, null, null);
+
+        if (orderCursor != null && orderCursor.moveToFirst()) {
+            double total = orderCursor.getDouble(orderCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_TOTAL));
+            double due = orderCursor.getDouble(orderCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_DUE));
+            String date = orderCursor.getString(orderCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_DATE));
+            
+            tvBillDetailStoreName.setText(tvBillingStoreName.getText()); // Use store name from context
+            tvBillDetailDateTime.setText(date);
+            tvBillDetailOrderId.setText("#" + orderId);
+            tvBillDetailSubTotal.setText(String.valueOf((int)total));
+            tvBillDetailPaid.setText(String.valueOf((int)(total - due)));
+            tvBillDetailDue.setText(String.valueOf((int)due));
+            orderCursor.close();
+        }
+
+        llBillItemsList.removeAllViews();
+        Cursor itemsCursor = dbHelper.getOrderItems(orderId);
+        if (itemsCursor != null && itemsCursor.moveToFirst()) {
+            do {
+                String itemName = itemsCursor.getString(itemsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
+                int qty = itemsCursor.getInt(itemsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OI_QUANTITY));
+                double price = itemsCursor.getDouble(itemsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OI_PRICE));
+
+                View itemView = LayoutInflater.from(this).inflate(R.layout.item_transaction_row, llBillItemsList, false);
+                // We reuse item_transaction_row layout but adapt it slightly if needed, 
+                // or ideally create a specific item_bill_item layout.
+                // For now, let's just create a simple row programmatically or use item_bill_item if it exists.
+                // Given the context, let's look for item_search_result or similar to reuse or just inflate a simple view.
+                
+                TextView nameTv = itemView.findViewById(R.id.tvTransactionDate);
+                TextView detailTv = itemView.findViewById(R.id.tvTransactionItems);
+                TextView priceTv = itemView.findViewById(R.id.tvTransactionTotal);
+                TextView statusTv = itemView.findViewById(R.id.tvTransactionStatus);
+
+                nameTv.setText(itemName);
+                detailTv.setText(qty + " units");
+                priceTv.setText(String.valueOf((int)(qty * price)));
+                statusTv.setVisibility(View.GONE);
+
+                llBillItemsList.addView(itemView);
+            } while (itemsCursor.moveToNext());
+            itemsCursor.close();
+        }
+
+        customerBillingHistoryLayout.setVisibility(View.GONE);
+        billDetailsLayout.setVisibility(View.VISIBLE);
     }
 
     @Override
