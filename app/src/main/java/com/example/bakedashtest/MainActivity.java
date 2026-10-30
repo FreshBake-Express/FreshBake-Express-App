@@ -66,6 +66,12 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout llHistoryList;
     private boolean isItemWise = true;
 
+    // Customer Billing History Fields
+    private View customerBillingHistoryLayout;
+    private TextView tvBillingCustomerName, tvBillingStoreName, tvTotalCustomerSales, tvTotalCustomerDue;
+    private LinearLayout llTransactionList;
+    private int currentBillingCustomerId = -1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,6 +91,7 @@ public class MainActivity extends AppCompatActivity {
         View customersLayout = findViewById(R.id.customersLayout);
         View addCustomerLayout = findViewById(R.id.addCustomerLayout);
         View historyLayout = findViewById(R.id.historyLayout);
+        customerBillingHistoryLayout = findViewById(R.id.customerBillingHistoryLayout);
         View itemsLayout = findViewById(R.id.itemsLayout);
         View addItemLayout = findViewById(R.id.addItemLayout);
 
@@ -129,6 +136,18 @@ public class MainActivity extends AppCompatActivity {
         tvListHeader = findViewById(R.id.tvListHeader);
         tvListCount = findViewById(R.id.tvListCount);
         llHistoryList = findViewById(R.id.llHistoryList);
+
+        // Billing History Initializations
+        tvBillingCustomerName = findViewById(R.id.tvBillingCustomerName);
+        tvBillingStoreName = findViewById(R.id.tvBillingStoreName);
+        tvTotalCustomerSales = findViewById(R.id.tvTotalCustomerSales);
+        tvTotalCustomerDue = findViewById(R.id.tvTotalCustomerDue);
+        llTransactionList = findViewById(R.id.llTransactionList);
+
+        findViewById(R.id.btnBackFromBillingHistory).setOnClickListener(v -> {
+            customerBillingHistoryLayout.setVisibility(View.GONE);
+            historyLayout.setVisibility(View.VISIBLE);
+        });
 
         if (tabItemWise != null) {
             tabItemWise.setOnClickListener(v -> {
@@ -899,12 +918,66 @@ public class MainActivity extends AppCompatActivity {
                     tvDue.setTextColor(getResources().getColor(R.color.primary_green, getTheme()));
                 }
 
+                int customerId = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
+                row.setOnClickListener(v -> showCustomerBillingHistory(customerId, firstName + " " + lastName, storeName, totalSales, currentDue));
+
                 llHistoryList.addView(row);
                 count++;
             } while (cursor.moveToNext());
             cursor.close();
         }
         tvListCount.setText(count + " stores");
+    }
+
+    private void showCustomerBillingHistory(int customerId, String customerName, String storeName, double totalSales, double currentDue) {
+        currentBillingCustomerId = customerId;
+        tvBillingCustomerName.setText(customerName);
+        tvBillingStoreName.setText(storeName);
+        tvTotalCustomerSales.setText(String.valueOf((int)totalSales));
+        tvTotalCustomerDue.setText(String.valueOf((int)currentDue));
+
+        llTransactionList.removeAllViews();
+        Cursor cursor = dbHelper.getCustomerTransactions(customerId);
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                int orderId = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
+                String date = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_DATE));
+                double total = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_TOTAL));
+                double due = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_DUE));
+
+                View row = LayoutInflater.from(this).inflate(R.layout.item_transaction_row, llTransactionList, false);
+                ((TextView)row.findViewById(R.id.tvTransactionDate)).setText(date);
+                ((TextView)row.findViewById(R.id.tvTransactionTotal)).setText(String.valueOf((int)total));
+                
+                TextView tvStatus = row.findViewById(R.id.tvTransactionStatus);
+                if (due > 0) {
+                    tvStatus.setText("Due " + (int)due);
+                    tvStatus.setTextColor(getResources().getColor(R.color.due_text, getTheme()));
+                } else {
+                    tvStatus.setText("Paid");
+                    tvStatus.setTextColor(getResources().getColor(R.color.primary_green, getTheme()));
+                }
+
+                // Optionally count items
+                Cursor itemsCursor = dbHelper.getOrderItems(orderId);
+                int itemCount = 0;
+                int unitCount = 0;
+                if (itemsCursor != null && itemsCursor.moveToFirst()) {
+                    do {
+                        itemCount++;
+                        unitCount += itemsCursor.getInt(itemsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OI_QUANTITY));
+                    } while (itemsCursor.moveToNext());
+                    itemsCursor.close();
+                }
+                ((TextView)row.findViewById(R.id.tvTransactionItems)).setText(itemCount + " items • " + unitCount + " units");
+
+                llTransactionList.addView(row);
+            } while (cursor.moveToNext());
+            cursor.close();
+        }
+
+        findViewById(R.id.historyLayout).setVisibility(View.GONE);
+        customerBillingHistoryLayout.setVisibility(View.VISIBLE);
     }
 
     @Override

@@ -247,11 +247,25 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public Cursor getCustomerWiseSales() {
         SQLiteDatabase db = this.getReadableDatabase();
-        String query = "SELECT c." + COLUMN_FIRST_NAME + ", c." + COLUMN_LAST_NAME + ", c." + COLUMN_STORE_NAME + ", c." + COLUMN_CONTACT + ", SUM(o." + COLUMN_ORDER_TOTAL + ") as total_sales, SUM(o." + COLUMN_ORDER_DUE + ") as current_due " +
+        String query = "SELECT c." + COLUMN_ID + ", c." + COLUMN_FIRST_NAME + ", c." + COLUMN_LAST_NAME + ", c." + COLUMN_STORE_NAME + ", c." + COLUMN_CONTACT + ", SUM(o." + COLUMN_ORDER_TOTAL + ") as total_sales, SUM(o." + COLUMN_ORDER_DUE + ") as current_due " +
                 "FROM " + TABLE_ORDERS + " o " +
                 "JOIN " + TABLE_CUSTOMERS + " c ON o." + COLUMN_ORDER_CUSTOMER_ID + " = c." + COLUMN_ID + " " +
                 "GROUP BY o." + COLUMN_ORDER_CUSTOMER_ID + " " +
                 "ORDER BY total_sales DESC";
         return db.rawQuery(query, null);
+    }
+
+    public Cursor getCustomerTransactions(int customerId) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT * FROM " + TABLE_ORDERS + " WHERE " + COLUMN_ORDER_CUSTOMER_ID + " = ? ORDER BY " + COLUMN_ORDER_DATE + " DESC";
+        return db.rawQuery(query, new String[]{String.valueOf(customerId)});
+    }
+
+    public Cursor getOrderItems(int orderId) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT oi.*, i." + COLUMN_ITEM_NAME + " FROM " + TABLE_ORDER_ITEMS + " oi " +
+                "JOIN " + TABLE_ITEMS + " i ON oi." + COLUMN_OI_ITEM_ID + " = i." + COLUMN_ID + " " +
+                "WHERE oi." + COLUMN_OI_ORDER_ID + " = ?";
+        return db.rawQuery(query, new String[]{String.valueOf(orderId)});
     }
 }
