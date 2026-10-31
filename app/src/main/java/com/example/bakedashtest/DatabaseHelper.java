@@ -285,24 +285,51 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public Cursor getItemWiseSales() {
+        return getItemWiseSales("");
+    }
+
+    public Cursor getItemWiseSales(String query) {
         SQLiteDatabase db = this.getReadableDatabase();
-        String query = "SELECT i." + COLUMN_ITEM_NAME + ", i." + COLUMN_OUR_PRICE + ", SUM(oi." + COLUMN_OI_QUANTITY + ") as total_qty, SUM(oi." + COLUMN_OI_QUANTITY + " * oi." + COLUMN_OI_PRICE + ") as total_price " +
+        String sql = "SELECT i." + COLUMN_ITEM_NAME + ", i." + COLUMN_OUR_PRICE + ", SUM(oi." + COLUMN_OI_QUANTITY + ") as total_qty, SUM(oi." + COLUMN_OI_QUANTITY + " * oi." + COLUMN_OI_PRICE + ") as total_price " +
                 "FROM " + TABLE_ORDER_ITEMS + " oi " +
-                "JOIN " + TABLE_ITEMS + " i ON oi." + COLUMN_OI_ITEM_ID + " = i." + COLUMN_ID + " " +
-                "GROUP BY oi." + COLUMN_OI_ITEM_ID + " " +
-                "ORDER BY total_qty DESC";
-        return db.rawQuery(query, null);
+                "JOIN " + TABLE_ITEMS + " i ON oi." + COLUMN_OI_ITEM_ID + " = i." + COLUMN_ID + " ";
+        
+        if (query != null && !query.isEmpty()) {
+            sql += "WHERE i." + COLUMN_ITEM_NAME + " LIKE ? ";
+        }
+        
+        sql += "GROUP BY oi." + COLUMN_OI_ITEM_ID + " " +
+               "ORDER BY total_qty DESC";
+               
+        if (query != null && !query.isEmpty()) {
+            return db.rawQuery(sql, new String[]{"%" + query + "%"});
+        }
+        return db.rawQuery(sql, null);
     }
 
     public Cursor getCustomerWiseSales() {
+        return getCustomerWiseSales("");
+    }
+
+    public Cursor getCustomerWiseSales(String query) {
         SQLiteDatabase db = this.getReadableDatabase();
-        String query = "SELECT c." + COLUMN_ID + ", c." + COLUMN_FIRST_NAME + ", c." + COLUMN_LAST_NAME + ", c." + COLUMN_STORE_NAME + ", c." + COLUMN_CONTACT + ", c." + COLUMN_OLD_BILL + " as current_due, IFNULL(SUM(o." + COLUMN_ORDER_TOTAL + "), 0) as total_sales, MAX(o." + COLUMN_ORDER_DATE + ") as last_order_date " +
+        String sql = "SELECT c." + COLUMN_ID + ", c." + COLUMN_FIRST_NAME + ", c." + COLUMN_LAST_NAME + ", c." + COLUMN_STORE_NAME + ", c." + COLUMN_CONTACT + ", c." + COLUMN_OLD_BILL + " as current_due, IFNULL(SUM(o." + COLUMN_ORDER_TOTAL + "), 0) as total_sales, MAX(o." + COLUMN_ORDER_DATE + ") as last_order_date " +
                 "FROM " + TABLE_CUSTOMERS + " c " +
-                "LEFT JOIN " + TABLE_ORDERS + " o ON o." + COLUMN_ORDER_CUSTOMER_ID + " = c." + COLUMN_ID + " " +
-                "GROUP BY c." + COLUMN_ID + " " +
-                "HAVING total_sales > 0 OR current_due > 0 " +
-                "ORDER BY last_order_date DESC, current_due DESC";
-        return db.rawQuery(query, null);
+                "LEFT JOIN " + TABLE_ORDERS + " o ON o." + COLUMN_ORDER_CUSTOMER_ID + " = c." + COLUMN_ID + " ";
+        
+        if (query != null && !query.isEmpty()) {
+            sql += "WHERE c." + COLUMN_FIRST_NAME + " LIKE ? OR c." + COLUMN_LAST_NAME + " LIKE ? OR c." + COLUMN_STORE_NAME + " LIKE ? ";
+        }
+        
+        sql += "GROUP BY c." + COLUMN_ID + " " +
+               "HAVING total_sales > 0 OR current_due > 0 " +
+               "ORDER BY last_order_date DESC, current_due DESC";
+
+        if (query != null && !query.isEmpty()) {
+            String q = "%" + query + "%";
+            return db.rawQuery(sql, new String[]{q, q, q});
+        }
+        return db.rawQuery(sql, null);
     }
 
     public Cursor getCustomerTransactions(int customerId) {

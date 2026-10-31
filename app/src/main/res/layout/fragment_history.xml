@@ -321,6 +321,7 @@
                 app:tint="@color/text_grey" />
 
             <EditText
+                android:id="@+id/etHistorySearch"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
