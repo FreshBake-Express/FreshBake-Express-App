@@ -60,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
     // Form fields
     private EditText etFirstName, etLastName, etStoreName, etContactNumber, etAddress, etOldBillAmount;
     private EditText etItemName, etOurPrice, etShopPrice;
+    private EditText etCustomerListSearch, etHistorySearch;
 
     // Delivery Search and Selected Customer
     private EditText etCustomerSearch;
@@ -139,6 +140,29 @@ public class MainActivity extends AppCompatActivity {
         etOurPrice = findViewById(R.id.etOurPrice);
         etShopPrice = findViewById(R.id.etShopPrice);
 
+        etCustomerListSearch = findViewById(R.id.etCustomerListSearch);
+        etHistorySearch = findViewById(R.id.etHistorySearch);
+
+        if (etCustomerListSearch != null) {
+            etCustomerListSearch.addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                @Override public void afterTextChanged(Editable s) {
+                    refreshCustomers();
+                }
+            });
+        }
+
+        if (etHistorySearch != null) {
+            etHistorySearch.addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                @Override public void afterTextChanged(Editable s) {
+                    refreshHistory();
+                }
+            });
+        }
+
         // Delivery Section Fields
         etCustomerSearch = findViewById(R.id.etCustomerSearch);
         llSearchResults = findViewById(R.id.llSearchResults);
@@ -205,15 +229,18 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnEditBill.setOnClickListener(v -> {
-            isEditingBill = !isEditingBill;
             if (isEditingBill) {
+                // If we were editing and click edit again, it means cancel/save? 
+                // In current logic it toggles. If toggling OFF, we should probably save or just revert.
+                // The user said "Print Bill" should save and print. 
+                // If they click "Save Changes" (which is btnBottomPrint when editing), it should just save.
+                saveEditedBill(false);
+            } else {
+                isEditingBill = true;
                 btnEditBill.setColorFilter(getResources().getColor(R.color.revenue_text, getTheme()));
                 etBillDetailPaid.setEnabled(true);
-            } else {
-                btnEditBill.setColorFilter(getResources().getColor(R.color.primary_green, getTheme()));
-                etBillDetailPaid.setEnabled(false);
+                refreshBillDetailsItems();
             }
-            refreshBillDetailsItems();
         });
 
         findViewById(R.id.btnBackFromBillDetails).setOnClickListener(v -> {
@@ -225,7 +252,7 @@ public class MainActivity extends AppCompatActivity {
 
         View.OnClickListener printAction = v -> {
             if (isEditingBill) {
-                saveEditedBill();
+                saveEditedBill(true);
             } else {
                 if (currentDetailOrderId != -1) {
                     printBill(currentDetailOrderId);
@@ -241,10 +268,7 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "Please select a customer first", Toast.LENGTH_SHORT).show();
                 return;
             }
-            // For the delivery screen "Print Bill" button, we might want to print a preview 
-            // or just save and print. Usually, printing happens after saving.
-            // Let's make it trigger save if not already saved, or show a message.
-            Toast.makeText(this, "Please save the bill first to print", Toast.LENGTH_SHORT).show();
+            saveCurrentBill(true);
         });
 
         findViewById(R.id.btnBackFromBillingHistory).setOnClickListener(v -> {
@@ -285,6 +309,8 @@ public class MainActivity extends AppCompatActivity {
             customersLayout.setVisibility(View.GONE);
             historyLayout.setVisibility(View.GONE);
             itemsLayout.setVisibility(View.GONE);
+            customerBillingHistoryLayout.setVisibility(View.GONE);
+            billDetailsLayout.setVisibility(View.GONE);
 
             if (itemId == R.id.nav_delivery) {
                 deliveryLayout.setVisibility(View.VISIBLE);
@@ -305,7 +331,7 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-        findViewById(R.id.btnSaveBill).setOnClickListener(v -> saveCurrentBill());
+        findViewById(R.id.btnSaveBill).setOnClickListener(v -> saveCurrentBill(false));
 
         // Add Customer Flow
         findViewById(R.id.btnCreateCustomer).setOnClickListener(v -> {
@@ -845,10 +871,21 @@ public class MainActivity extends AppCompatActivity {
         if (llCustomerList == null) return;
         llCustomerList.removeAllViews();
 
+        String query = "";
+        if (etCustomerListSearch != null) {
+            query = etCustomerListSearch.getText().toString().trim();
+        }
+
         int count = dbHelper.getCustomersCount();
         tvCustomerCount.setText(getString(R.string.customer_count, count));
 
-        Cursor cursor = dbHelper.getAllCustomers();
+        Cursor cursor;
+        if (query.isEmpty()) {
+            cursor = dbHelper.getAllCustomers();
+        } else {
+            cursor = dbHelper.searchCustomers(query);
+        }
+
         if (cursor != null && cursor.moveToFirst()) {
             do {
                 int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
@@ -872,7 +909,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void saveCurrentBill() {
+    private void saveCurrentBill(boolean autoPrint) {
         if (selectedCustomerId == -1) {
             Toast.makeText(this, "Please select a customer first", Toast.LENGTH_SHORT).show();
             return;
@@ -917,19 +954,24 @@ public class MainActivity extends AppCompatActivity {
 
                     Toast.makeText(this, "Bill saved successfully!", Toast.LENGTH_SHORT).show();
 
-                    // Ask for printing
-                    new androidx.appcompat.app.AlertDialog.Builder(this)
-                        .setTitle("Print Bill")
-                        .setMessage("Do you want to print this bill now?")
-                        .setPositiveButton("Print", (dialog, which) -> {
-                            printBill((int) orderId);
-                            resetDeliveryScreen();
-                        })
-                        .setNegativeButton("No", (dialog, which) -> {
-                            resetDeliveryScreen();
-                        })
-                        .setCancelable(false)
-                        .show();
+                    if (autoPrint) {
+                        printBill((int) orderId);
+                        resetDeliveryScreen();
+                    } else {
+                        // Ask for printing
+                        new androidx.appcompat.app.AlertDialog.Builder(this)
+                            .setTitle("Print Bill")
+                            .setMessage("Do you want to print this bill now?")
+                            .setPositiveButton("Print", (dialog, which) -> {
+                                printBill((int) orderId);
+                                resetDeliveryScreen();
+                            })
+                            .setNegativeButton("No", (dialog, which) -> {
+                                resetDeliveryScreen();
+                            })
+                            .setCancelable(false)
+                            .show();
+                    }
                 } else {
                     Toast.makeText(this, "Failed to save bill", Toast.LENGTH_SHORT).show();
                 }
@@ -976,10 +1018,16 @@ public class MainActivity extends AppCompatActivity {
     private void refreshHistory() {
         updateStats();
         llHistoryList.removeAllViews();
+        
+        String query = "";
+        if (etHistorySearch != null) {
+            query = etHistorySearch.getText().toString().trim();
+        }
+        
         if (isItemWise) {
-            populateItemWiseList();
+            populateItemWiseList(query);
         } else {
-            populateCustomerWiseList();
+            populateCustomerWiseList(query);
         }
     }
 
@@ -999,8 +1047,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void populateItemWiseList() {
-        Cursor cursor = dbHelper.getItemWiseSales();
+    private void populateItemWiseList(String query) {
+        Cursor cursor = dbHelper.getItemWiseSales(query);
         int count = 0;
         if (cursor != null && cursor.moveToFirst()) {
             do {
@@ -1022,8 +1070,8 @@ public class MainActivity extends AppCompatActivity {
         tvListCount.setText(count + " items sold");
     }
 
-    private void populateCustomerWiseList() {
-        Cursor cursor = dbHelper.getCustomerWiseSales();
+    private void populateCustomerWiseList(String query) {
+        Cursor cursor = dbHelper.getCustomerWiseSales(query);
         int count = 0;
         if (cursor != null && cursor.moveToFirst()) {
             do {
@@ -1415,7 +1463,7 @@ public class MainActivity extends AppCompatActivity {
         // though usually we want it to finish.
     }
 
-    private void saveEditedBill() {
+    private void saveEditedBill(boolean andPrint) {
         try {
             boolean hasValidItems = false;
             for (Integer qty : editOrderQuantities.values()) {
@@ -1476,6 +1524,10 @@ public class MainActivity extends AppCompatActivity {
                 
                 // Return to the bill details in read-only mode
                 showBillDetails(currentDetailOrderId);
+
+                if (andPrint) {
+                    printBill(currentDetailOrderId);
+                }
             } else {
                 Toast.makeText(this, "Failed to update bill", Toast.LENGTH_SHORT).show();
             }
@@ -1500,10 +1552,10 @@ public class MainActivity extends AppCompatActivity {
         String amountStr = etSettleAmountHistory.getText().toString().trim();
         if (amountStr.isEmpty()) {
             Toast.makeText(this, "Enter amount to pay", Toast.LENGTH_SHORT).show();
+            etSettleAmountHistory.requestFocus();
             return;
         }
 
-        double finalCurrentDue = currentDue;
         try {
             double paymentAmount = Double.parseDouble(amountStr);
             if (paymentAmount <= 0) {
@@ -1511,35 +1563,47 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            double newDue = finalCurrentDue - paymentAmount;
+            double newDue = currentDue - paymentAmount;
 
-            // Confirm payment with a simple dialog
             new androidx.appcompat.app.AlertDialog.Builder(this)
                     .setTitle("Confirm Payment")
                     .setMessage("Amount: " + (int)paymentAmount + "\nNew Due: " + (int)newDue)
-                    .setPositiveButton("Confirm", (dialog, which) -> {
-                        String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
-                        long orderId = dbHelper.saveOrder(currentBillingCustomerId, date, 0, paymentAmount, newDue, new HashMap<>(), new HashMap<>());
-
-                        if (orderId != -1) {
-                            dbHelper.updateCustomerDue(currentBillingCustomerId, newDue);
-                            Toast.makeText(this, "Payment recorded successfully", Toast.LENGTH_SHORT).show();
-
-                            // Refresh the billing history view
-                            showCustomerBillingHistory(currentBillingCustomerId,
-                                    tvBillingCustomerName.getText().toString(),
-                                    tvBillingStoreName.getText().toString(),
-                                    Double.parseDouble(tvTotalCustomerSales.getText().toString()),
-                                    newDue);
-                        } else {
-                            Toast.makeText(this, "Failed to record payment", Toast.LENGTH_SHORT).show();
-                        }
+                    .setPositiveButton("Settle & Print", (dialog, which) -> {
+                        performSettlement(paymentAmount, newDue, true);
+                    })
+                    .setNeutralButton("Settle Only", (dialog, which) -> {
+                        performSettlement(paymentAmount, newDue, false);
                     })
                     .setNegativeButton("Cancel", null)
                     .show();
 
         } catch (NumberFormatException e) {
             Toast.makeText(this, "Invalid number format", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void performSettlement(double paymentAmount, double newDue, boolean shouldPrint) {
+        String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+        long orderId = dbHelper.saveOrder(currentBillingCustomerId, date, 0, paymentAmount, newDue, new HashMap<>(), new HashMap<>());
+
+        if (orderId != -1) {
+            dbHelper.updateCustomerDue(currentBillingCustomerId, newDue);
+            Toast.makeText(this, "Payment recorded successfully", Toast.LENGTH_SHORT).show();
+
+            if (shouldPrint) {
+                printBill((int) orderId);
+            }
+
+            // Refresh the billing history view
+            showCustomerBillingHistory(currentBillingCustomerId,
+                    tvBillingCustomerName.getText().toString(),
+                    tvBillingStoreName.getText().toString(),
+                    Double.parseDouble(tvTotalCustomerSales.getText().toString()),
+                    newDue);
+
+            refreshHistory(); // Refresh the main history list too
+        } else {
+            Toast.makeText(this, "Failed to record payment", Toast.LENGTH_SHORT).show();
         }
     }
 

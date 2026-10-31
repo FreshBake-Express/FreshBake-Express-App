@@ -321,11 +321,13 @@
                 app:tint="@color/text_grey" />
 
             <EditText
+                android:id="@+id/etHistorySearch"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:background="@android:color/transparent"
                 android:hint="Search items or stores..."
+                android:textColor="@android:color/black"
                 android:textSize="14sp" />
         </LinearLayout>
 
