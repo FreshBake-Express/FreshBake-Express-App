@@ -229,15 +229,18 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnEditBill.setOnClickListener(v -> {
-            isEditingBill = !isEditingBill;
             if (isEditingBill) {
+                // If we were editing and click edit again, it means cancel/save? 
+                // In current logic it toggles. If toggling OFF, we should probably save or just revert.
+                // The user said "Print Bill" should save and print. 
+                // If they click "Save Changes" (which is btnBottomPrint when editing), it should just save.
+                saveEditedBill(false);
+            } else {
+                isEditingBill = true;
                 btnEditBill.setColorFilter(getResources().getColor(R.color.revenue_text, getTheme()));
                 etBillDetailPaid.setEnabled(true);
-            } else {
-                btnEditBill.setColorFilter(getResources().getColor(R.color.primary_green, getTheme()));
-                etBillDetailPaid.setEnabled(false);
+                refreshBillDetailsItems();
             }
-            refreshBillDetailsItems();
         });
 
         findViewById(R.id.btnBackFromBillDetails).setOnClickListener(v -> {
@@ -249,7 +252,7 @@ public class MainActivity extends AppCompatActivity {
 
         View.OnClickListener printAction = v -> {
             if (isEditingBill) {
-                saveEditedBill();
+                saveEditedBill(true);
             } else {
                 if (currentDetailOrderId != -1) {
                     printBill(currentDetailOrderId);
@@ -265,10 +268,7 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "Please select a customer first", Toast.LENGTH_SHORT).show();
                 return;
             }
-            // For the delivery screen "Print Bill" button, we might want to print a preview 
-            // or just save and print. Usually, printing happens after saving.
-            // Let's make it trigger save if not already saved, or show a message.
-            Toast.makeText(this, "Please save the bill first to print", Toast.LENGTH_SHORT).show();
+            saveCurrentBill(true);
         });
 
         findViewById(R.id.btnBackFromBillingHistory).setOnClickListener(v -> {
@@ -331,7 +331,7 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-        findViewById(R.id.btnSaveBill).setOnClickListener(v -> saveCurrentBill());
+        findViewById(R.id.btnSaveBill).setOnClickListener(v -> saveCurrentBill(false));
 
         // Add Customer Flow
         findViewById(R.id.btnCreateCustomer).setOnClickListener(v -> {
@@ -909,7 +909,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void saveCurrentBill() {
+    private void saveCurrentBill(boolean autoPrint) {
         if (selectedCustomerId == -1) {
             Toast.makeText(this, "Please select a customer first", Toast.LENGTH_SHORT).show();
             return;
@@ -954,19 +954,24 @@ public class MainActivity extends AppCompatActivity {
 
                     Toast.makeText(this, "Bill saved successfully!", Toast.LENGTH_SHORT).show();
 
-                    // Ask for printing
-                    new androidx.appcompat.app.AlertDialog.Builder(this)
-                        .setTitle("Print Bill")
-                        .setMessage("Do you want to print this bill now?")
-                        .setPositiveButton("Print", (dialog, which) -> {
-                            printBill((int) orderId);
-                            resetDeliveryScreen();
-                        })
-                        .setNegativeButton("No", (dialog, which) -> {
-                            resetDeliveryScreen();
-                        })
-                        .setCancelable(false)
-                        .show();
+                    if (autoPrint) {
+                        printBill((int) orderId);
+                        resetDeliveryScreen();
+                    } else {
+                        // Ask for printing
+                        new androidx.appcompat.app.AlertDialog.Builder(this)
+                            .setTitle("Print Bill")
+                            .setMessage("Do you want to print this bill now?")
+                            .setPositiveButton("Print", (dialog, which) -> {
+                                printBill((int) orderId);
+                                resetDeliveryScreen();
+                            })
+                            .setNegativeButton("No", (dialog, which) -> {
+                                resetDeliveryScreen();
+                            })
+                            .setCancelable(false)
+                            .show();
+                    }
                 } else {
                     Toast.makeText(this, "Failed to save bill", Toast.LENGTH_SHORT).show();
                 }
@@ -1458,7 +1463,7 @@ public class MainActivity extends AppCompatActivity {
         // though usually we want it to finish.
     }
 
-    private void saveEditedBill() {
+    private void saveEditedBill(boolean andPrint) {
         try {
             boolean hasValidItems = false;
             for (Integer qty : editOrderQuantities.values()) {
@@ -1519,6 +1524,10 @@ public class MainActivity extends AppCompatActivity {
                 
                 // Return to the bill details in read-only mode
                 showBillDetails(currentDetailOrderId);
+
+                if (andPrint) {
+                    printBill(currentDetailOrderId);
+                }
             } else {
                 Toast.makeText(this, "Failed to update bill", Toast.LENGTH_SHORT).show();
             }
