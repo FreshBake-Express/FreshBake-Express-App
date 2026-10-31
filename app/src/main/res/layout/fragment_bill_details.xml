@@ -33,6 +33,16 @@
             android:textStyle="bold" />
 
         <ImageView
+            android:id="@+id/btnEditBill"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="16dp"
+            android:layout_toStartOf="@id/btnPrintBill"
+            android:contentDescription="Edit"
+            android:src="@android:drawable/ic_menu_edit"
+            app:tint="@color/primary_green" />
+
+        <ImageView
             android:id="@+id/btnPrintBill"
             android:layout_width="24dp"
             android:layout_height="24dp"
@@ -172,11 +182,16 @@
                         android:textColor="@color/primary_green"
                         android:textSize="14sp" />
 
-                    <TextView
-                        android:id="@+id/tvBillDetailPaid"
+                    <EditText
+                        android:id="@+id/etBillDetailPaid"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_alignParentEnd="true"
+                        android:background="@null"
+                        android:enabled="false"
+                        android:gravity="end"
+                        android:inputType="number"
+                        android:minWidth="60dp"
                         android:text="1,000"
                         android:textColor="@color/primary_green"
                         android:textSize="14sp" />
@@ -205,6 +220,8 @@
                         android:textSize="14sp"
                         android:textStyle="bold" />
                 </RelativeLayout>
+
+
             </LinearLayout>
 
             <Button

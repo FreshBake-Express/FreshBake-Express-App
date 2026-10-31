@@ -145,7 +145,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_OLD_BILL, newDue);
-        return db.update(TABLE_CUSTOMERS, values, COLUMN_ID + " = ?", new String[]{String.valueOf(id)});
+        int result = db.update(TABLE_CUSTOMERS, values, COLUMN_ID + " = ?", new String[]{String.valueOf(id)});
+        return result;
     }
 
     public long addItem(String itemName, double ourPrice, double shopPrice) {
@@ -224,15 +225,63 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
+    public boolean updateOrder(int orderId, double total, double paid, double due, Map<Integer, Integer> quantities, Map<Integer, Double> prices) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            // Get old due and customer_id to update customer's overall balance
+            Cursor cursor = db.query(TABLE_ORDERS, new String[]{COLUMN_ORDER_CUSTOMER_ID, COLUMN_ORDER_DUE}, 
+                    COLUMN_ID + " = ?", new String[]{String.valueOf(orderId)}, null, null, null);
+            
+            if (cursor != null && cursor.moveToFirst()) {
+                int customerId = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ORDER_CUSTOMER_ID));
+                double oldDue = cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_ORDER_DUE));
+                cursor.close();
+
+                // Update order
+                ContentValues orderValues = new ContentValues();
+                orderValues.put(COLUMN_ORDER_TOTAL, total);
+                orderValues.put(COLUMN_ORDER_PAID, paid);
+                orderValues.put(COLUMN_ORDER_DUE, due);
+                db.update(TABLE_ORDERS, orderValues, COLUMN_ID + " = ?", new String[]{String.valueOf(orderId)});
+
+                // Update customer's cumulative due
+                double dueDiff = due - oldDue;
+                db.execSQL("UPDATE " + TABLE_CUSTOMERS + " SET " + COLUMN_OLD_BILL + " = " + COLUMN_OLD_BILL + " + ? WHERE " + COLUMN_ID + " = ?",
+                        new Object[]{dueDiff, customerId});
+            }
+
+            // Update items
+            db.delete(TABLE_ORDER_ITEMS, COLUMN_OI_ORDER_ID + " = ?", new String[]{String.valueOf(orderId)});
+            for (Map.Entry<Integer, Integer> entry : quantities.entrySet()) {
+                if (entry.getValue() > 0) {
+                    ContentValues itemValues = new ContentValues();
+                    itemValues.put(COLUMN_OI_ORDER_ID, orderId);
+                    itemValues.put(COLUMN_OI_ITEM_ID, entry.getKey());
+                    itemValues.put(COLUMN_OI_QUANTITY, entry.getValue());
+                    itemValues.put(COLUMN_OI_PRICE, prices.get(entry.getKey()));
+                    db.insert(TABLE_ORDER_ITEMS, null, itemValues);
+                }
+            }
+            db.setTransactionSuccessful();
+            return true;
+        } catch (Exception e) {
+            return false;
+        } finally {
+            db.endTransaction();
+            db.close();
+        }
+    }
+
     public Cursor getTodayStats() {
         SQLiteDatabase db = this.getReadableDatabase();
         String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(new java.util.Date());
-        String query = "SELECT SUM(" + COLUMN_ORDER_TOTAL + ") as total_revenue, " +
-                "COUNT(" + COLUMN_ID + ") as total_bills, " +
-                "SUM(" + COLUMN_ORDER_DUE + ") as total_due, " +
-                "(SELECT COUNT(DISTINCT " + COLUMN_ORDER_CUSTOMER_ID + ") FROM " + TABLE_ORDERS + " WHERE " + COLUMN_ORDER_DATE + " LIKE ? AND " + COLUMN_ORDER_DUE + " > 0) as pending_stores " +
-                "FROM " + TABLE_ORDERS + " WHERE " + COLUMN_ORDER_DATE + " LIKE ?";
-        return db.rawQuery(query, new String[]{today + "%", today + "%"});
+        String query = "SELECT " +
+                "(SELECT IFNULL(SUM(" + COLUMN_ORDER_TOTAL + "), 0) FROM " + TABLE_ORDERS + " WHERE " + COLUMN_ORDER_DATE + " LIKE ?) as total_revenue, " +
+                "(SELECT COUNT(" + COLUMN_ID + ") FROM " + TABLE_ORDERS + " WHERE " + COLUMN_ORDER_DATE + " LIKE ?) as total_bills, " +
+                "(SELECT IFNULL(SUM(" + COLUMN_OLD_BILL + "), 0) FROM " + TABLE_CUSTOMERS + ") as total_due, " +
+                "(SELECT COUNT(DISTINCT " + COLUMN_ORDER_CUSTOMER_ID + ") FROM " + TABLE_ORDERS + " WHERE " + COLUMN_ORDER_DATE + " LIKE ? AND " + COLUMN_ORDER_CUSTOMER_ID + " IN (SELECT " + COLUMN_ID + " FROM " + TABLE_CUSTOMERS + " WHERE " + COLUMN_OLD_BILL + " > 0)) as pending_stores";
+        return db.rawQuery(query, new String[]{today + "%", today + "%", today + "%"});
     }
 
     public Cursor getItemWiseSales() {
@@ -247,11 +296,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public Cursor getCustomerWiseSales() {
         SQLiteDatabase db = this.getReadableDatabase();
-        String query = "SELECT c." + COLUMN_ID + ", c." + COLUMN_FIRST_NAME + ", c." + COLUMN_LAST_NAME + ", c." + COLUMN_STORE_NAME + ", c." + COLUMN_CONTACT + ", SUM(o." + COLUMN_ORDER_TOTAL + ") as total_sales, SUM(o." + COLUMN_ORDER_DUE + ") as current_due " +
-                "FROM " + TABLE_ORDERS + " o " +
-                "JOIN " + TABLE_CUSTOMERS + " c ON o." + COLUMN_ORDER_CUSTOMER_ID + " = c." + COLUMN_ID + " " +
-                "GROUP BY o." + COLUMN_ORDER_CUSTOMER_ID + " " +
-                "ORDER BY total_sales DESC";
+        String query = "SELECT c." + COLUMN_ID + ", c." + COLUMN_FIRST_NAME + ", c." + COLUMN_LAST_NAME + ", c." + COLUMN_STORE_NAME + ", c." + COLUMN_CONTACT + ", c." + COLUMN_OLD_BILL + " as current_due, IFNULL(SUM(o." + COLUMN_ORDER_TOTAL + "), 0) as total_sales, MAX(o." + COLUMN_ORDER_DATE + ") as last_order_date " +
+                "FROM " + TABLE_CUSTOMERS + " c " +
+                "LEFT JOIN " + TABLE_ORDERS + " o ON o." + COLUMN_ORDER_CUSTOMER_ID + " = c." + COLUMN_ID + " " +
+                "GROUP BY c." + COLUMN_ID + " " +
+                "HAVING total_sales > 0 OR current_due > 0 " +
+                "ORDER BY last_order_date DESC, current_due DESC";
         return db.rawQuery(query, null);
     }
 

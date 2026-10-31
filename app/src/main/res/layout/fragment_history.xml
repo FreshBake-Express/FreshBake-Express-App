@@ -283,24 +283,24 @@
             android:padding="4dp">
 
             <TextView
-                android:id="@+id/tabItemWise"
+                android:id="@+id/tabCustomerWise"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:background="@drawable/bg_tab_selected"
                 android:gravity="center"
-                android:text="Item-wise Sales"
+                android:text="Customer-wise Sales"
                 android:textColor="@color/revenue_text"
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/tabCustomerWise"
+                android:id="@+id/tabItemWise"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:gravity="center"
-                android:text="Customer-wise Sales"
+                android:text="Item-wise Sales"
                 android:textColor="@color/text_grey"
                 android:textSize="14sp" />
         </LinearLayout>
