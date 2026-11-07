@@ -93,43 +93,22 @@
                 android:textColor="#1E293B"
                 android:textSize="16sp" />
 
-            <!-- Our Selling Price -->
+            <!-- Cost -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Our Selling Price *"
+                android:text="Cost *"
                 android:textColor="@color/black"
                 android:textStyle="bold" />
 
             <EditText
-                android:id="@+id/etOurPrice"
+                android:id="@+id/etCost"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:layout_marginTop="8dp"
                 android:background="@drawable/bg_input_field"
-                android:hint="Enter price"
-                android:inputType="numberDecimal"
-                android:paddingHorizontal="16dp"
-                android:textColor="#1E293B"
-                android:textSize="16sp" />
-
-            <!-- Shop Selling Price -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Shop Selling Price *"
-                android:textColor="@color/black"
-                android:textStyle="bold" />
-
-            <EditText
-                android:id="@+id/etShopPrice"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_input_field"
-                android:hint="Enter price"
+                android:hint="Enter cost"
                 android:inputType="numberDecimal"
                 android:paddingHorizontal="16dp"
                 android:textColor="#1E293B"

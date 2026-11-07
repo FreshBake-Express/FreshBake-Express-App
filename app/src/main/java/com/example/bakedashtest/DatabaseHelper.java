@@ -26,8 +26,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public static final String TABLE_ITEMS = "items";
     public static final String COLUMN_ITEM_NAME = "item_name";
-    public static final String COLUMN_OUR_PRICE = "our_price";
-    public static final String COLUMN_SHOP_PRICE = "shop_price";
+    public static final String COLUMN_COST = "cost";
 
     public static final String TABLE_ORDERS = "orders";
     public static final String COLUMN_ORDER_CUSTOMER_ID = "customer_id";
@@ -55,8 +54,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String CREATE_TABLE_ITEMS = "CREATE TABLE " + TABLE_ITEMS + "("
             + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
             + COLUMN_ITEM_NAME + " TEXT,"
-            + COLUMN_OUR_PRICE + " REAL,"
-            + COLUMN_SHOP_PRICE + " REAL"
+            + COLUMN_COST + " REAL"
             + ")";
 
     private static final String CREATE_TABLE_ORDERS = "CREATE TABLE " + TABLE_ORDERS + "("
@@ -77,7 +75,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             + ")";
 
     public DatabaseHelper(Context context) {
-        super(context, DATABASE_NAME, null, 3);
+        super(context, DATABASE_NAME, null, 4);
     }
 
     @Override
@@ -91,11 +89,21 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         if (oldVersion < 2) {
-            db.execSQL(CREATE_TABLE_ITEMS);
-        }
-        if (oldVersion < 3) {
-            db.execSQL(CREATE_TABLE_ORDERS);
-            db.execSQL(CREATE_TABLE_ORDER_ITEMS);
+            db.execSQL("CREATE TABLE items_new (id INTEGER PRIMARY KEY AUTOINCREMENT, item_name TEXT, cost REAL)");
+            db.execSQL("INSERT INTO items_new (id, item_name, cost) SELECT id, item_name, our_price FROM items");
+            db.execSQL("DROP TABLE items");
+            db.execSQL("ALTER TABLE items_new RENAME TO items");
+        } else if (oldVersion < 4) {
+            // Migration for version 4: Remove shop_price and rename our_price to cost
+            db.execSQL("CREATE TABLE items_new (id INTEGER PRIMARY KEY AUTOINCREMENT, item_name TEXT, cost REAL)");
+            db.execSQL("INSERT INTO items_new (id, item_name, cost) SELECT id, item_name, our_price FROM items");
+            db.execSQL("DROP TABLE items");
+            db.execSQL("ALTER TABLE items_new RENAME TO items");
+            
+            if (oldVersion < 3) {
+                db.execSQL(CREATE_TABLE_ORDERS);
+                db.execSQL(CREATE_TABLE_ORDER_ITEMS);
+            }
         }
     }
 
@@ -149,12 +157,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return result;
     }
 
-    public long addItem(String itemName, double ourPrice, double shopPrice) {
+    public long addItem(String itemName, double cost) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_ITEM_NAME, itemName);
-        values.put(COLUMN_OUR_PRICE, ourPrice);
-        values.put(COLUMN_SHOP_PRICE, shopPrice);
+        values.put(COLUMN_COST, cost);
 
         long id = db.insert(TABLE_ITEMS, null, values);
         db.close();
@@ -175,12 +182,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return count;
     }
 
-    public int updateItem(int id, String itemName, double ourPrice, double shopPrice) {
+    public int updateItem(int id, String itemName, double cost) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_ITEM_NAME, itemName);
-        values.put(COLUMN_OUR_PRICE, ourPrice);
-        values.put(COLUMN_SHOP_PRICE, shopPrice);
+        values.put(COLUMN_COST, cost);
 
         return db.update(TABLE_ITEMS, values, COLUMN_ID + " = ?", new String[]{String.valueOf(id)});
     }
@@ -290,7 +296,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public Cursor getItemWiseSales(String query) {
         SQLiteDatabase db = this.getReadableDatabase();
-        String sql = "SELECT i." + COLUMN_ITEM_NAME + ", i." + COLUMN_OUR_PRICE + ", SUM(oi." + COLUMN_OI_QUANTITY + ") as total_qty, SUM(oi." + COLUMN_OI_QUANTITY + " * oi." + COLUMN_OI_PRICE + ") as total_price " +
+        String sql = "SELECT i." + COLUMN_ITEM_NAME + ", i." + COLUMN_COST + ", SUM(oi." + COLUMN_OI_QUANTITY + ") as total_qty, SUM(oi." + COLUMN_OI_QUANTITY + " * oi." + COLUMN_OI_PRICE + ") as total_price " +
                 "FROM " + TABLE_ORDER_ITEMS + " oi " +
                 "JOIN " + TABLE_ITEMS + " i ON oi." + COLUMN_OI_ITEM_ID + " = i." + COLUMN_ID + " ";
         

@@ -26,16 +26,15 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import androidx.activity.OnBackPressedCallback;
 import android.database.Cursor;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
-import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.graphics.Rect;
 import android.content.Context;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.webkit.WebView;
@@ -59,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Form fields
     private EditText etFirstName, etLastName, etStoreName, etContactNumber, etAddress, etOldBillAmount;
-    private EditText etItemName, etOurPrice, etShopPrice;
+    private EditText etItemName, etCost;
     private EditText etCustomerListSearch, etHistorySearch;
 
     // Delivery Search and Selected Customer
@@ -83,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tabItemWise, tabCustomerWise;
     private TextView tvListHeader, tvListCount;
     private LinearLayout llHistoryList;
+    private View deliveryLayout, customersLayout, addCustomerLayout, historyLayout, itemsLayout, addItemLayout, settingsLayout;
     private boolean isItemWise = false;
 
     // Customer Billing History Fields
@@ -119,13 +119,15 @@ public class MainActivity extends AppCompatActivity {
         tvAddCustomerTitle = findViewById(R.id.tvAddCustomerTitle);
         bottomNav = findViewById(R.id.bottomNavigation);
 
-        View deliveryLayout = findViewById(R.id.deliveryLayout);
-        View customersLayout = findViewById(R.id.customersLayout);
-        View addCustomerLayout = findViewById(R.id.addCustomerLayout);
-        View historyLayout = findViewById(R.id.historyLayout);
+        deliveryLayout = findViewById(R.id.deliveryLayout);
+        customersLayout = findViewById(R.id.customersLayout);
+        addCustomerLayout = findViewById(R.id.addCustomerLayout);
+        historyLayout = findViewById(R.id.historyLayout);
         customerBillingHistoryLayout = findViewById(R.id.customerBillingHistoryLayout);
-        View itemsLayout = findViewById(R.id.itemsLayout);
-        View addItemLayout = findViewById(R.id.addItemLayout);
+        itemsLayout = findViewById(R.id.itemsLayout);
+        addItemLayout = findViewById(R.id.addItemLayout);
+        settingsLayout = findViewById(R.id.settingsLayout);
+        billDetailsLayout = findViewById(R.id.billDetailsLayout);
 
         // Add Customer Form Fields
         etFirstName = findViewById(R.id.etFirstName);
@@ -137,8 +139,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Add Item Form Fields
         etItemName = findViewById(R.id.etItemName);
-        etOurPrice = findViewById(R.id.etOurPrice);
-        etShopPrice = findViewById(R.id.etShopPrice);
+        etCost = findViewById(R.id.etCost);
 
         etCustomerListSearch = findViewById(R.id.etCustomerListSearch);
         etHistorySearch = findViewById(R.id.etHistorySearch);
@@ -205,7 +206,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Bill Details Initializations
-        billDetailsLayout = findViewById(R.id.billDetailsLayout);
         tvBillDetailStoreName = findViewById(R.id.tvBillDetailStoreName);
         tvBillDetailDateTime = findViewById(R.id.tvBillDetailDateTime);
         tvBillDetailOrderId = findViewById(R.id.tvBillDetailOrderId);
@@ -243,12 +243,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        findViewById(R.id.btnBackFromBillDetails).setOnClickListener(v -> {
-            isEditingBill = false;
-            btnEditBill.setColorFilter(getResources().getColor(R.color.primary_green, getTheme()));
-            billDetailsLayout.setVisibility(View.GONE);
-            customerBillingHistoryLayout.setVisibility(View.VISIBLE);
-        });
+        findViewById(R.id.btnBackFromBillDetails).setOnClickListener(v -> navigateToDelivery());
 
         View.OnClickListener printAction = v -> {
             if (isEditingBill) {
@@ -271,11 +266,19 @@ public class MainActivity extends AppCompatActivity {
             saveCurrentBill(true);
         });
 
-        findViewById(R.id.btnBackFromBillingHistory).setOnClickListener(v -> {
-            customerBillingHistoryLayout.setVisibility(View.GONE);
-            historyLayout.setVisibility(View.VISIBLE);
-            updateHistoryTabs();
+        findViewById(R.id.btnBackFromBillingHistory).setOnClickListener(v -> navigateToDelivery());
+
+        // Settings Section Listeners
+        findViewById(R.id.btnSettingManageItems).setOnClickListener(v -> {
+            settingsLayout.setVisibility(View.GONE);
+            itemsLayout.setVisibility(View.VISIBLE);
         });
+
+        findViewById(R.id.btnSettingLanguage).setOnClickListener(v -> {
+            Toast.makeText(this, "Language settings coming soon", Toast.LENGTH_SHORT).show();
+        });
+
+        findViewById(R.id.btnBackFromItems).setOnClickListener(v -> navigateToDelivery());
 
         if (tabItemWise != null) {
             tabItemWise.setOnClickListener(v -> {
@@ -311,6 +314,7 @@ public class MainActivity extends AppCompatActivity {
             itemsLayout.setVisibility(View.GONE);
             customerBillingHistoryLayout.setVisibility(View.GONE);
             billDetailsLayout.setVisibility(View.GONE);
+            settingsLayout.setVisibility(View.GONE);
 
             if (itemId == R.id.nav_delivery) {
                 deliveryLayout.setVisibility(View.VISIBLE);
@@ -324,8 +328,8 @@ public class MainActivity extends AppCompatActivity {
                 updateHistoryTabs();
                 refreshHistory();
                 return true;
-            } else if (itemId == R.id.nav_items) {
-                itemsLayout.setVisibility(View.VISIBLE);
+            } else if (itemId == R.id.nav_settings) {
+                settingsLayout.setVisibility(View.VISIBLE);
                 return true;
             }
             return false;
@@ -352,12 +356,7 @@ public class MainActivity extends AppCompatActivity {
             bottomNav.setVisibility(View.GONE);
         });
 
-        findViewById(R.id.backButton).setOnClickListener(v -> {
-            editingCustomerId = -1;
-            addCustomerLayout.setVisibility(View.GONE);
-            customersLayout.setVisibility(View.VISIBLE);
-            bottomNav.setVisibility(View.VISIBLE);
-        });
+        findViewById(R.id.backButton).setOnClickListener(v -> navigateToDelivery());
 
         findViewById(R.id.saveButton).setOnClickListener(v -> {
             String firstName = etFirstName.getText().toString().trim();
@@ -418,45 +417,37 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btnAddItem).setOnClickListener(v -> {
             editingItemId = -1;
             etItemName.setText("");
-            etOurPrice.setText("");
-            etShopPrice.setText("");
+            etCost.setText("");
             
             itemsLayout.setVisibility(View.GONE);
             addItemLayout.setVisibility(View.VISIBLE);
             bottomNav.setVisibility(View.GONE);
         });
 
-        findViewById(R.id.backButtonItems).setOnClickListener(v -> {
-            addItemLayout.setVisibility(View.GONE);
-            itemsLayout.setVisibility(View.VISIBLE);
-            bottomNav.setVisibility(View.VISIBLE);
-        });
+        findViewById(R.id.backButtonItems).setOnClickListener(v -> navigateToDelivery());
 
         findViewById(R.id.saveItemButton).setOnClickListener(v -> {
             String itemName = etItemName.getText().toString().trim();
-            String ourPriceStr = etOurPrice.getText().toString().trim();
-            String shopPriceStr = etShopPrice.getText().toString().trim();
+            String costStr = etCost.getText().toString().trim();
 
-            if (itemName.isEmpty() || ourPriceStr.isEmpty() || shopPriceStr.isEmpty()) {
+            if (itemName.isEmpty() || costStr.isEmpty()) {
                 Toast.makeText(this, "Please fill all required fields", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            double ourPrice;
-            double shopPrice;
+            double cost;
             try {
-                ourPrice = Double.parseDouble(ourPriceStr);
-                shopPrice = Double.parseDouble(shopPriceStr);
+                cost = Double.parseDouble(costStr);
             } catch (NumberFormatException e) {
-                Toast.makeText(this, "Please enter valid prices", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Please enter a valid cost", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             long result;
             if (editingItemId == -1) {
-                result = dbHelper.addItem(itemName, ourPrice, shopPrice);
+                result = dbHelper.addItem(itemName, cost);
             } else {
-                result = dbHelper.updateItem(editingItemId, itemName, ourPrice, shopPrice);
+                result = dbHelper.updateItem(editingItemId, itemName, cost);
             }
 
             if (result != -1) {
@@ -464,8 +455,7 @@ public class MainActivity extends AppCompatActivity {
                 
                 // Clear the form
                 etItemName.setText("");
-                etOurPrice.setText("");
-                etShopPrice.setText("");
+                etCost.setText("");
                 editingItemId = -1;
 
                 // Refresh the items list
@@ -488,6 +478,19 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (deliveryLayout.getVisibility() != View.VISIBLE) {
+                    navigateToDelivery();
+                } else {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                    setEnabled(true);
+                }
+            }
+        });
     }
 
     private void updateDeliveryDate() {
@@ -507,34 +510,30 @@ public class MainActivity extends AppCompatActivity {
             do {
                 int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
                 String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
-                double ourPrice = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OUR_PRICE));
-                double shopPrice = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_SHOP_PRICE));
+                double cost = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COST));
 
                 View row = LayoutInflater.from(this).inflate(R.layout.item_product_row, llItemsList, false);
-                setupProductRow(row, id, name, String.valueOf((int)ourPrice), String.valueOf((int)shopPrice));
+                setupProductRow(row, id, name, String.valueOf((int)cost));
                 llItemsList.addView(row);
             } while (cursor.moveToNext());
             cursor.close();
         }
     }
 
-    private void setupProductRow(View row, int id, String name, String ourPrice, String shopPrice) {
+    private void setupProductRow(View row, int id, String name, String cost) {
         if (row == null) return;
         android.widget.TextView tvName = row.findViewById(R.id.productName);
-        android.widget.TextView tvOurPrice = row.findViewById(R.id.ourPrice);
-        android.widget.TextView tvShopPrice = row.findViewById(R.id.shopPrice);
+        android.widget.TextView tvCost = row.findViewById(R.id.itemCost);
         View editIcon = row.findViewById(R.id.editIcon);
 
         if (tvName != null) tvName.setText(name);
-        if (tvOurPrice != null) tvOurPrice.setText(ourPrice);
-        if (tvShopPrice != null) tvShopPrice.setText(shopPrice);
+        if (tvCost != null) tvCost.setText(cost);
 
         if (editIcon != null) {
             editIcon.setOnClickListener(v -> {
                 editingItemId = id;
                 etItemName.setText(name);
-                etOurPrice.setText(ourPrice);
-                etShopPrice.setText(shopPrice);
+                etCost.setText(cost);
 
                 findViewById(R.id.itemsLayout).setVisibility(View.GONE);
                 findViewById(R.id.addItemLayout).setVisibility(View.VISIBLE);
@@ -595,13 +594,13 @@ public class MainActivity extends AppCompatActivity {
             do {
                 int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
                 String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
-                double ourPrice = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OUR_PRICE));
+                double cost = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COST));
 
-                itemPrices.put(id, ourPrice);
+                itemPrices.put(id, cost);
                 deliveryQuantities.put(id, 0);
 
                 View row = LayoutInflater.from(this).inflate(R.layout.item_delivery_row, llDeliveryItemsList, false);
-                setupDeliveryItemRow(row, id, name, ourPrice);
+                setupDeliveryItemRow(row, id, name, cost);
                 llDeliveryItemsList.addView(row);
 
                 // Add a divider
@@ -1053,7 +1052,7 @@ public class MainActivity extends AppCompatActivity {
         if (cursor != null && cursor.moveToFirst()) {
             do {
                 String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
-                double price = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OUR_PRICE));
+                double price = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COST));
                 int qty = cursor.getInt(cursor.getColumnIndexOrThrow("total_qty"));
                 double total = cursor.getDouble(cursor.getColumnIndexOrThrow("total_price"));
 
@@ -1605,6 +1604,31 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Toast.makeText(this, "Failed to record payment", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void navigateToDelivery() {
+        isEditingBill = false;
+        editingCustomerId = -1;
+        editingItemId = -1;
+        
+        if (btnEditBill != null) {
+            btnEditBill.setColorFilter(getResources().getColor(R.color.primary_green, getTheme()));
+        }
+
+        addCustomerLayout.setVisibility(View.GONE);
+        addItemLayout.setVisibility(View.GONE);
+        deliveryLayout.setVisibility(View.VISIBLE);
+        customersLayout.setVisibility(View.GONE);
+        historyLayout.setVisibility(View.GONE);
+        itemsLayout.setVisibility(View.GONE);
+        customerBillingHistoryLayout.setVisibility(View.GONE);
+        billDetailsLayout.setVisibility(View.GONE);
+        settingsLayout.setVisibility(View.GONE);
+        
+        bottomNav.setVisibility(View.VISIBLE);
+        bottomNav.setSelectedItemId(R.id.nav_delivery);
+        
+        refreshDeliveryItems();
     }
 
     @Override

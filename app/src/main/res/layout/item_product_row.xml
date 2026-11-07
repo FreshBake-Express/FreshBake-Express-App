@@ -37,39 +37,16 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Our Price"
+                android:text="Cost"
                 android:textColor="@color/text_grey"
                 android:textSize="12sp" />
 
             <TextView
-                android:id="@+id/ourPrice"
+                android:id="@+id/itemCost"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="35"
                 android:textColor="@color/primary_green"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Shop Price"
-                android:textColor="@color/text_grey"
-                android:textSize="12sp" />
-
-            <TextView
-                android:id="@+id/shopPrice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="40"
-                android:textColor="@color/black"
                 android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>

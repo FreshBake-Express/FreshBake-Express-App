@@ -70,6 +70,15 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <include
+        android:id="@+id/settingsLayout"
+        layout="@layout/fragment_settings"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@+id/bottomNavigation"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <include
         android:id="@+id/addItemLayout"
         layout="@layout/fragment_add_item"
         android:layout_width="match_parent"
