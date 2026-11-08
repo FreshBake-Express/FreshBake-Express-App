@@ -19,7 +19,11 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
+import androidx.drawerlayout.widget.DrawerLayout;
+import com.google.android.material.navigation.NavigationView;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.GravityCompat;
+import androidx.appcompat.app.ActionBarDrawerToggle;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -54,7 +58,9 @@ public class MainActivity extends AppCompatActivity {
     private int editingCustomerId = -1;
     private int editingItemId = -1;
     private TextView tvAddCustomerTitle;
-    private BottomNavigationView bottomNav;
+    private DrawerLayout drawerLayout;
+    private NavigationView navigationView;
+    private Toolbar toolbar;
 
     // Form fields
     private EditText etFirstName, etLastName, etStoreName, etContactNumber, etAddress, etOldBillAmount;
@@ -117,7 +123,24 @@ public class MainActivity extends AppCompatActivity {
         llItemsList = findViewById(R.id.llItemsList);
         tvCustomerCount = findViewById(R.id.tvCustomerCount);
         tvAddCustomerTitle = findViewById(R.id.tvAddCustomerTitle);
-        bottomNav = findViewById(R.id.bottomNavigation);
+        drawerLayout = findViewById(R.id.drawer_layout);
+        navigationView = findViewById(R.id.navigationView);
+        toolbar = findViewById(R.id.toolbar);
+
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
+        }
+
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+                this, drawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        drawerLayout.addDrawerListener(toggle);
+        toggle.syncState();
+
+        toolbar.setNavigationOnClickListener(v -> drawerLayout.openDrawer(GravityCompat.START));
+
+        View headerView = navigationView.getHeaderView(0);
+        headerView.findViewById(R.id.btnCloseDrawer).setOnClickListener(v -> drawerLayout.closeDrawer(GravityCompat.START));
 
         deliveryLayout = findViewById(R.id.deliveryLayout);
         customersLayout = findViewById(R.id.customersLayout);
@@ -304,7 +327,7 @@ public class MainActivity extends AppCompatActivity {
         // Initial load for delivery items
         refreshDeliveryItems();
 
-        bottomNav.setOnItemSelectedListener(item -> {
+        navigationView.setNavigationItemSelectedListener(item -> {
             int itemId = item.getItemId();
             addCustomerLayout.setVisibility(View.GONE);
             addItemLayout.setVisibility(View.GONE);
@@ -319,21 +342,33 @@ public class MainActivity extends AppCompatActivity {
             if (itemId == R.id.nav_delivery) {
                 deliveryLayout.setVisibility(View.VISIBLE);
                 refreshDeliveryItems();
-                return true;
             } else if (itemId == R.id.nav_customers) {
                 customersLayout.setVisibility(View.VISIBLE);
-                return true;
+                refreshCustomers();
             } else if (itemId == R.id.nav_history) {
                 historyLayout.setVisibility(View.VISIBLE);
                 updateHistoryTabs();
                 refreshHistory();
-                return true;
+            } else if (itemId == R.id.nav_items) {
+                itemsLayout.setVisibility(View.VISIBLE);
+                refreshItems();
             } else if (itemId == R.id.nav_settings) {
                 settingsLayout.setVisibility(View.VISIBLE);
-                return true;
+            } else if (itemId == R.id.nav_logout) {
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("Logout")
+                        .setMessage("Are you sure you want to logout?")
+                        .setPositiveButton("Logout", (dialog, which) -> finish())
+                        .setNegativeButton("Cancel", null)
+                        .show();
             }
-            return false;
+            
+            drawerLayout.closeDrawer(GravityCompat.START);
+            return true;
         });
+
+        // Set default selection
+        navigationView.setCheckedItem(R.id.nav_delivery);
 
         findViewById(R.id.btnSaveBill).setOnClickListener(v -> saveCurrentBill(false));
 
@@ -353,7 +388,6 @@ public class MainActivity extends AppCompatActivity {
             customersLayout.setVisibility(View.GONE);
             itemsLayout.setVisibility(View.GONE);
             addCustomerLayout.setVisibility(View.VISIBLE);
-            bottomNav.setVisibility(View.GONE);
         });
 
         findViewById(R.id.backButton).setOnClickListener(v -> navigateToDelivery());
@@ -407,7 +441,7 @@ public class MainActivity extends AppCompatActivity {
 
                 addCustomerLayout.setVisibility(View.GONE);
                 customersLayout.setVisibility(View.VISIBLE);
-                bottomNav.setVisibility(View.VISIBLE);
+                // bottomNav.setVisibility(View.VISIBLE);
             } else {
                 Toast.makeText(this, "Error saving customer", Toast.LENGTH_SHORT).show();
             }
@@ -421,7 +455,6 @@ public class MainActivity extends AppCompatActivity {
             
             itemsLayout.setVisibility(View.GONE);
             addItemLayout.setVisibility(View.VISIBLE);
-            bottomNav.setVisibility(View.GONE);
         });
 
         findViewById(R.id.backButtonItems).setOnClickListener(v -> navigateToDelivery());
@@ -464,7 +497,7 @@ public class MainActivity extends AppCompatActivity {
                 // Dismiss screen and open Manage Items view
                 addItemLayout.setVisibility(View.GONE);
                 itemsLayout.setVisibility(View.VISIBLE);
-                bottomNav.setVisibility(View.VISIBLE);
+                // bottomNav.setVisibility(View.VISIBLE);
             } else {
                 Toast.makeText(this, "Error saving item", Toast.LENGTH_SHORT).show();
             }
@@ -473,7 +506,7 @@ public class MainActivity extends AppCompatActivity {
         refreshItems();
         refreshCustomers();
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.drawer_layout), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
@@ -482,7 +515,9 @@ public class MainActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (deliveryLayout.getVisibility() != View.VISIBLE) {
+                if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                    drawerLayout.closeDrawer(GravityCompat.START);
+                } else if (deliveryLayout.getVisibility() != View.VISIBLE) {
                     navigateToDelivery();
                 } else {
                     setEnabled(false);
@@ -537,7 +572,6 @@ public class MainActivity extends AppCompatActivity {
 
                 findViewById(R.id.itemsLayout).setVisibility(View.GONE);
                 findViewById(R.id.addItemLayout).setVisibility(View.VISIBLE);
-                if (bottomNav != null) bottomNav.setVisibility(View.GONE);
             });
         }
     }
@@ -578,7 +612,6 @@ public class MainActivity extends AppCompatActivity {
 
                 findViewById(R.id.customersLayout).setVisibility(View.GONE);
                 findViewById(R.id.addCustomerLayout).setVisibility(View.VISIBLE);
-                if (bottomNav != null) bottomNav.setVisibility(View.GONE);
             });
         }
     }
@@ -1625,8 +1658,7 @@ public class MainActivity extends AppCompatActivity {
         billDetailsLayout.setVisibility(View.GONE);
         settingsLayout.setVisibility(View.GONE);
         
-        bottomNav.setVisibility(View.VISIBLE);
-        bottomNav.setSelectedItemId(R.id.nav_delivery);
+        navigationView.setCheckedItem(R.id.nav_delivery);
         
         refreshDeliveryItems();
     }

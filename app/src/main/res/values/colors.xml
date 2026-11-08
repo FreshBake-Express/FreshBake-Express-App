@@ -16,4 +16,20 @@
     <color name="divider_grey">#E2E8F0</color>
     <color name="item_bg_grey">#F8FAFC</color>
     <color name="search_bg">#F1F5F9</color>
+    <color name="nav_item_color">#94A3B8</color>
+    <color name="drawer_bg">#111827</color>
+    <color name="header_bg">#064E3B</color>
+    <color name="active_nav_green">#10B981</color>
+    <color name="nav_item_tint_normal">#94A3B8</color>
+    <color name="nav_text_inactive">#94A3B8</color>
+    <!-- Final Navigation Design Colors -->
+    <color name="nav_drawer_black">#000000</color>
+    <color name="nav_header_green">#064E3B</color>
+    <color name="nav_header_subtext">#A5D6A7</color>
+    <color name="nav_active_green_selected">#16A34A</color>
+    <color name="nav_selected_bg">#e8f5e9</color>
+    <color name="nav_selected_text">#16A34A</color>
+    <color name="nav_text_white">#FFFFFF</color>
+    <color name="nav_logout_bg">#FEE2E2</color>
+    <color name="nav_logout_text">#DC2626</color>
 </resources>

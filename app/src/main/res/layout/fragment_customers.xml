@@ -7,63 +7,77 @@
     android:layout_height="match_parent"
     android:background="@color/white">
 
+    <!-- Fixed Top Section -->
+    <LinearLayout
+        android:id="@+id/fixedTopSection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        android:elevation="4dp"
+        android:orientation="vertical"
+        android:padding="20dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Customers"
+            android:textColor="@color/black"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Manage your delivery customers"
+            android:textColor="@color/text_grey"
+            android:textSize="14sp" />
+
+        <!-- Search Bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_search"
+            android:backgroundTint="#F8FBF9"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@android:drawable/ic_menu_search"
+                app:tint="@color/text_grey" />
+
+            <EditText
+                android:id="@+id/etCustomerListSearch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:background="@android:color/transparent"
+                android:hint="Search customer or store"
+                android:inputType="text"
+                android:textColor="#1E293B"
+                android:textSize="16sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Scrollable Content -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@+id/bottomSection"
-        app:layout_constraintTop_toTopOf="parent">
+        android:fillViewport="true"
+        app:layout_constraintBottom_toTopOf="@id/fixedBottomSection"
+        app:layout_constraintTop_toBottomOf="@id/fixedTopSection">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
-
-            <!-- Header -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Customers"
-                android:textColor="@color/black"
-                android:textSize="24sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Manage your delivery customers"
-                android:textColor="@color/text_grey"
-                android:textSize="14sp" />
-
-            <!-- Search Bar -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="20dp"
-                android:background="@drawable/bg_search"
-                android:backgroundTint="#F8FBF9"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="16dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@android:drawable/ic_menu_search"
-                    app:tint="@color/text_grey" />
-
-                <EditText
-                    android:id="@+id/etCustomerListSearch"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:background="@android:color/transparent"
-                    android:hint="Search customer or store"
-                    android:inputType="text"
-                    android:textColor="#1E293B"
-                    android:textSize="16sp" />
-            </LinearLayout>
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="20dp">
 
             <RelativeLayout
                 android:layout_width="match_parent"
@@ -103,42 +117,36 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:orientation="vertical">
-
             </LinearLayout>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
+    <!-- Fixed Bottom Section -->
     <LinearLayout
-        android:id="@+id/bottomSection"
+        android:id="@+id/fixedBottomSection"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/white"
+        android:elevation="8dp"
         android:orientation="vertical"
-        android:padding="20dp"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="40dp"
         app:layout_constraintBottom_toBottomOf="parent">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:text="Can't find a customer? Add their details below."
-            android:textColor="@color/text_grey"
-            android:textSize="14sp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCreateCustomer"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:layout_marginTop="12dp"
-            android:backgroundTint="@color/primary_green"
-            android:text="Create Customer"
+            android:backgroundTint="@color/nav_active_green_selected"
+            android:text="@string/btn_create_customer"
             android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="16sp"
             app:cornerRadius="12dp"
             app:icon="@android:drawable/ic_input_add"
             app:iconTint="@color/white" />
-
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

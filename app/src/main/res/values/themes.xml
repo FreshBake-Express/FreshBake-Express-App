@@ -7,9 +7,25 @@
         <item name="android:windowBackground">@color/white</item>
     </style>
 
-    <style name="Theme.BakeDashTest" parent="Base.Theme.BakeDashTest" />
+    <style name="Theme.BakeDashTest" parent="Base.Theme.BakeDashTest" >
+        <item name="textAppearanceListItem">@style/NavMenuItemAppearance</item>
+    </style>
+
+    <style name="NavMenuItemAppearance" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:letterSpacing">0.02</item>
+    </style>
 
     <style name="App.BottomNavigation.ActiveIndicator" parent="">
         <item name="android:color">@color/primary_green_light</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.App.CornerSize12" parent="">
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.App.Rectangle" parent="">
+        <item name="cornerSize">0dp</item>
     </style>
 </resources>
