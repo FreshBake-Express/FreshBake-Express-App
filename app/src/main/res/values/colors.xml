@@ -32,4 +32,16 @@
     <color name="nav_text_white">#FFFFFF</color>
     <color name="nav_logout_bg">#FEE2E2</color>
     <color name="nav_logout_text">#DC2626</color>
+
+    <!-- Stock Management Colors -->
+    <color name="stock_in_bg">#F0FDF4</color>
+    <color name="stock_in_text">#166534</color>
+    <color name="stock_low_bg">#FFF7ED</color>
+    <color name="stock_low_text">#9A3412</color>
+    <color name="stock_out_bg">#FEF2F2</color>
+    <color name="stock_out_text">#991B1B</color>
+    <color name="alert_bg">#FFFBEB</color>
+    <color name="alert_text">#92400E</color>
+    <color name="grn_button_bg">#0D9488</color>
+    <color name="stockroom_teal">#0F766E</color>
 </resources>

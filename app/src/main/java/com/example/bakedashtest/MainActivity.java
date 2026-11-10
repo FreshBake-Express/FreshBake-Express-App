@@ -17,6 +17,8 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -63,8 +65,8 @@ public class MainActivity extends AppCompatActivity {
 
     // Form fields
     private EditText etFirstName, etLastName, etStoreName, etContactNumber, etAddress, etOldBillAmount;
-    private EditText etItemName, etCost;
-    private EditText etCustomerListSearch, etHistorySearch;
+    private EditText etItemName, etCost, etSKU, etCategory, etReorderLevel;
+    private EditText etCustomerListSearch, etHistorySearch, etStockSearch;
 
     // Delivery Search and Selected Customer
     private EditText etCustomerSearch;
@@ -87,8 +89,13 @@ public class MainActivity extends AppCompatActivity {
     private TextView tabItemWise, tabCustomerWise;
     private TextView tvListHeader, tvListCount;
     private LinearLayout llHistoryList;
-    private View deliveryLayout, customersLayout, addCustomerLayout, historyLayout, itemsLayout, addItemLayout, settingsLayout;
+    private View deliveryLayout, customersLayout, addCustomerLayout, historyLayout, itemsLayout, addItemLayout, settingsLayout, stockManagementLayout, addGRNLayout;
+    private LinearLayout llStockList, llGRNItemsList;
+    private EditText etSupplier, etGRNDate, etDeliveryNote;
+    private TextView tvGRNNumber, tvGRNItemsCount, tvTotalItemsBottom, tvTotalQtyBottom, tvGRNTotalAmount;
     private boolean isItemWise = false;
+    private int stockFilterMode = 0; // 0: All, 1: In Stock, 2: Low Stock, 3: Out of Stock
+    private String stockCategoryFilter = "All categories";
 
     // Customer Billing History Fields
     private View customerBillingHistoryLayout;
@@ -135,9 +142,36 @@ public class MainActivity extends AppCompatActivity {
         historyLayout = findViewById(R.id.historyLayout);
         customerBillingHistoryLayout = findViewById(R.id.customerBillingHistoryLayout);
         itemsLayout = findViewById(R.id.itemsLayout);
+        stockManagementLayout = findViewById(R.id.stockManagementLayout);
         addItemLayout = findViewById(R.id.addItemLayout);
         settingsLayout = findViewById(R.id.settingsLayout);
         billDetailsLayout = findViewById(R.id.billDetailsLayout);
+        addGRNLayout = findViewById(R.id.addGRNLayout);
+
+        llStockList = findViewById(R.id.llStockList);
+
+        if (stockManagementLayout != null) {
+            stockManagementLayout.findViewById(R.id.btnAddGRN).setOnClickListener(v -> showAddGRNScreen());
+        }
+
+        if (addGRNLayout != null) {
+            etSupplier = addGRNLayout.findViewById(R.id.etSupplier);
+            etGRNDate = addGRNLayout.findViewById(R.id.etGRNDate);
+            etDeliveryNote = addGRNLayout.findViewById(R.id.etDeliveryNote);
+            tvGRNNumber = addGRNLayout.findViewById(R.id.tvGRNNumber);
+            tvGRNItemsCount = addGRNLayout.findViewById(R.id.tvGRNItemsCount);
+            tvTotalItemsBottom = addGRNLayout.findViewById(R.id.tvTotalItemsBottom);
+            tvTotalQtyBottom = addGRNLayout.findViewById(R.id.tvTotalQtyBottom);
+            tvGRNTotalAmount = addGRNLayout.findViewById(R.id.tvGRNTotalAmount);
+            llGRNItemsList = addGRNLayout.findViewById(R.id.llGRNItemsList);
+
+            addGRNLayout.findViewById(R.id.btnBackToStock).setOnClickListener(v -> showStockManagement());
+            addGRNLayout.findViewById(R.id.btnCancelGRN).setOnClickListener(v -> showStockManagement());
+            addGRNLayout.findViewById(R.id.btnSaveDraftGRN).setOnClickListener(v -> showStockManagement());
+            addGRNLayout.findViewById(R.id.btnSaveGRN).setOnClickListener(v -> saveGRN());
+
+            etGRNDate.setText(new SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(new Date()));
+        }
 
         // Add Customer Form Fields
         etFirstName = findViewById(R.id.etFirstName);
@@ -150,9 +184,13 @@ public class MainActivity extends AppCompatActivity {
         // Add Item Form Fields
         etItemName = findViewById(R.id.etItemName);
         etCost = findViewById(R.id.etCost);
+        etSKU = findViewById(R.id.etSKU);
+        etCategory = findViewById(R.id.etCategory);
+        etReorderLevel = findViewById(R.id.etReorderLevel);
 
         etCustomerListSearch = findViewById(R.id.etCustomerListSearch);
         etHistorySearch = findViewById(R.id.etHistorySearch);
+        etStockSearch = findViewById(R.id.etStockSearch);
 
         if (etCustomerListSearch != null) {
             etCustomerListSearch.addTextChangedListener(new TextWatcher() {
@@ -164,14 +202,22 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        if (etHistorySearch != null) {
-            etHistorySearch.addTextChangedListener(new TextWatcher() {
+        if (etStockSearch != null) {
+            etStockSearch.addTextChangedListener(new TextWatcher() {
                 @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
                 @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
                 @Override public void afterTextChanged(Editable s) {
-                    refreshHistory();
+                    refreshStockManagement();
                 }
             });
+        }
+
+        if (stockManagementLayout != null) {
+            stockManagementLayout.findViewById(R.id.tvFilterAll).setOnClickListener(v -> { stockFilterMode = 0; refreshStockManagement(); });
+            stockManagementLayout.findViewById(R.id.tvFilterInStock).setOnClickListener(v -> { stockFilterMode = 1; refreshStockManagement(); });
+            stockManagementLayout.findViewById(R.id.tvFilterLowStock).setOnClickListener(v -> { stockFilterMode = 2; refreshStockManagement(); });
+            stockManagementLayout.findViewById(R.id.tvFilterOutOfStock).setOnClickListener(v -> { stockFilterMode = 3; refreshStockManagement(); });
+            stockManagementLayout.findViewById(R.id.tvCategoryFilter).setOnClickListener(v -> showCategoryFilterDialog());
         }
 
         // Delivery Section Fields
@@ -316,15 +362,7 @@ public class MainActivity extends AppCompatActivity {
 
         navigationView.setNavigationItemSelectedListener(item -> {
             int itemId = item.getItemId();
-            addCustomerLayout.setVisibility(View.GONE);
-            addItemLayout.setVisibility(View.GONE);
-            deliveryLayout.setVisibility(View.GONE);
-            customersLayout.setVisibility(View.GONE);
-            historyLayout.setVisibility(View.GONE);
-            itemsLayout.setVisibility(View.GONE);
-            customerBillingHistoryLayout.setVisibility(View.GONE);
-            billDetailsLayout.setVisibility(View.GONE);
-            settingsLayout.setVisibility(View.GONE);
+            hideAllLayouts();
 
             if (itemId == R.id.nav_delivery) {
                 deliveryLayout.setVisibility(View.VISIBLE);
@@ -339,6 +377,8 @@ public class MainActivity extends AppCompatActivity {
             } else if (itemId == R.id.nav_items) {
                 itemsLayout.setVisibility(View.VISIBLE);
                 refreshItems();
+            } else if (itemId == R.id.nav_product) {
+                showStockManagement();
             } else if (itemId == R.id.nav_settings) {
                 settingsLayout.setVisibility(View.VISIBLE);
             } else if (itemId == R.id.nav_logout) {
@@ -439,6 +479,9 @@ public class MainActivity extends AppCompatActivity {
             editingItemId = -1;
             etItemName.setText("");
             etCost.setText("");
+            etSKU.setText("");
+            etCategory.setText("");
+            etReorderLevel.setText("");
             
             itemsLayout.setVisibility(View.GONE);
             addItemLayout.setVisibility(View.VISIBLE);
@@ -449,6 +492,9 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.saveItemButton).setOnClickListener(v -> {
             String itemName = etItemName.getText().toString().trim();
             String costStr = etCost.getText().toString().trim();
+            String sku = etSKU.getText().toString().trim();
+            String category = etCategory.getText().toString().trim();
+            String reorderStr = etReorderLevel.getText().toString().trim();
 
             if (itemName.isEmpty() || costStr.isEmpty()) {
                 Toast.makeText(this, "Please fill all required fields", Toast.LENGTH_SHORT).show();
@@ -463,11 +509,18 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
+            int reorderLevel = 15;
+            if (!reorderStr.isEmpty()) {
+                try {
+                    reorderLevel = Integer.parseInt(reorderStr);
+                } catch (NumberFormatException e) {}
+            }
+
             long result;
             if (editingItemId == -1) {
-                result = dbHelper.addItem(itemName, cost);
+                result = dbHelper.addItem(itemName, cost, sku, category, reorderLevel);
             } else {
-                result = dbHelper.updateItem(editingItemId, itemName, cost);
+                result = dbHelper.updateItem(editingItemId, itemName, cost, sku, category, reorderLevel);
             }
 
             if (result != -1) {
@@ -476,6 +529,9 @@ public class MainActivity extends AppCompatActivity {
                 // Clear the form
                 etItemName.setText("");
                 etCost.setText("");
+                etSKU.setText("");
+                etCategory.setText("");
+                etReorderLevel.setText("");
                 editingItemId = -1;
 
                 // Refresh the items list
@@ -554,8 +610,15 @@ public class MainActivity extends AppCompatActivity {
         if (editIcon != null) {
             editIcon.setOnClickListener(v -> {
                 editingItemId = id;
-                etItemName.setText(name);
-                etCost.setText(cost);
+                Cursor cursor = dbHelper.getReadableDatabase().query(DatabaseHelper.TABLE_ITEMS, null, DatabaseHelper.COLUMN_ID + "=?", new String[]{String.valueOf(id)}, null, null, null);
+                if (cursor != null && cursor.moveToFirst()) {
+                    etItemName.setText(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME)));
+                    etCost.setText(String.valueOf((int)cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COST))));
+                    etSKU.setText(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_SKU)));
+                    etCategory.setText(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_CATEGORY)));
+                    etReorderLevel.setText(String.valueOf(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_REORDER_LEVEL))));
+                    cursor.close();
+                }
 
                 findViewById(R.id.itemsLayout).setVisibility(View.GONE);
                 findViewById(R.id.addItemLayout).setVisibility(View.VISIBLE);
@@ -1635,19 +1698,405 @@ public class MainActivity extends AppCompatActivity {
             btnEditBill.setColorFilter(getResources().getColor(R.color.primary_green, getTheme()));
         }
 
-        addCustomerLayout.setVisibility(View.GONE);
-        addItemLayout.setVisibility(View.GONE);
+        hideAllLayouts();
         deliveryLayout.setVisibility(View.VISIBLE);
-        customersLayout.setVisibility(View.GONE);
-        historyLayout.setVisibility(View.GONE);
-        itemsLayout.setVisibility(View.GONE);
-        customerBillingHistoryLayout.setVisibility(View.GONE);
-        billDetailsLayout.setVisibility(View.GONE);
-        settingsLayout.setVisibility(View.GONE);
         
         navigationView.setCheckedItem(R.id.nav_delivery);
         
         refreshDeliveryItems();
+    }
+
+    private void hideAllLayouts() {
+        if (addCustomerLayout != null) addCustomerLayout.setVisibility(View.GONE);
+        if (addItemLayout != null) addItemLayout.setVisibility(View.GONE);
+        if (deliveryLayout != null) deliveryLayout.setVisibility(View.GONE);
+        if (customersLayout != null) customersLayout.setVisibility(View.GONE);
+        if (historyLayout != null) historyLayout.setVisibility(View.GONE);
+        if (itemsLayout != null) itemsLayout.setVisibility(View.GONE);
+        if (stockManagementLayout != null) stockManagementLayout.setVisibility(View.GONE);
+        if (addGRNLayout != null) addGRNLayout.setVisibility(View.GONE);
+        if (customerBillingHistoryLayout != null) customerBillingHistoryLayout.setVisibility(View.GONE);
+        if (billDetailsLayout != null) billDetailsLayout.setVisibility(View.GONE);
+        if (settingsLayout != null) settingsLayout.setVisibility(View.GONE);
+    }
+
+    private void showStockManagement() {
+        hideAllLayouts();
+        stockManagementLayout.setVisibility(View.VISIBLE);
+        refreshStockManagement();
+    }
+
+    private void showAddGRNScreen() {
+        hideAllLayouts();
+        addGRNLayout.setVisibility(View.VISIBLE);
+        
+        // Initialize GRN screen
+        tvGRNNumber.setText("GRN-" + new SimpleDateFormat("yyyy-MMdd", Locale.getDefault()).format(new Date()) + " · New receipt");
+        llGRNItemsList.removeAllViews();
+        
+        Cursor cursor = dbHelper.getAllItems();
+        int itemCount = 0;
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                int itemId = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
+                String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
+                String sku = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_SKU));
+                double cost = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COST));
+
+                View row = LayoutInflater.from(this).inflate(R.layout.item_grn_row, llGRNItemsList, false);
+                ((TextView)row.findViewById(R.id.tvItemName)).setText(name);
+                ((TextView)row.findViewById(R.id.tvItemSKU)).setText((sku != null && !sku.isEmpty() ? sku : "") + " · Each");
+                
+                EditText etQty = row.findViewById(R.id.etQty);
+                EditText etPrice = row.findViewById(R.id.etPrice);
+                TextView tvRowTotal = row.findViewById(R.id.tvRowTotal);
+
+                etPrice.setText(String.format(Locale.US, "%.2f", cost));
+                
+                TextWatcher watcher = new TextWatcher() {
+                    @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                    @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                    @Override public void afterTextChanged(Editable s) {
+                        calculateGRNTotal();
+                        try {
+                            String qs = etQty.getText().toString();
+                            String ps = etPrice.getText().toString();
+                            int q = qs.isEmpty() ? 0 : Integer.parseInt(qs);
+                            double p = ps.isEmpty() ? 0 : Double.parseDouble(ps);
+                            tvRowTotal.setText(String.format(Locale.US, "%.2f", q * p));
+                        } catch (Exception e) {
+                            tvRowTotal.setText("0.00");
+                        }
+                    }
+                };
+                etQty.addTextChangedListener(watcher);
+                etPrice.addTextChangedListener(watcher);
+
+                row.setTag(itemId);
+                llGRNItemsList.addView(row);
+                itemCount++;
+            } while (cursor.moveToNext());
+            cursor.close();
+        }
+        
+        tvGRNItemsCount.setText(itemCount + " items");
+        tvTotalItemsBottom.setText(itemCount + " items");
+        calculateGRNTotal();
+    }
+
+    private void calculateGRNTotal() {
+        int totalQty = 0;
+        double totalAmount = 0;
+        for (int i = 0; i < llGRNItemsList.getChildCount(); i++) {
+            View row = llGRNItemsList.getChildAt(i);
+            EditText etQty = row.findViewById(R.id.etQty);
+            EditText etPrice = row.findViewById(R.id.etPrice);
+            try {
+                String qs = etQty.getText().toString();
+                String ps = etPrice.getText().toString();
+                int q = qs.isEmpty() ? 0 : Integer.parseInt(qs);
+                double p = ps.isEmpty() ? 0 : Double.parseDouble(ps);
+                totalQty += q;
+                totalAmount += (q * p);
+            } catch (Exception ignored) {}
+        }
+        tvTotalQtyBottom.setText("Total qty: " + totalQty);
+        tvGRNTotalAmount.setText(String.format(Locale.US, "%.2f", totalAmount));
+    }
+
+    private void saveGRN() {
+        boolean anyUpdated = false;
+        for (int i = 0; i < llGRNItemsList.getChildCount(); i++) {
+            View row = llGRNItemsList.getChildAt(i);
+            int itemId = (int) row.getTag();
+            EditText etQty = row.findViewById(R.id.etQty);
+            String qtyStr = etQty.getText().toString().trim();
+            if (!qtyStr.isEmpty()) {
+                try {
+                    int receivedQty = Integer.parseInt(qtyStr);
+                    if (receivedQty > 0) {
+                        dbHelper.addStock(itemId, receivedQty);
+                        dbHelper.addGRNLog(itemId, receivedQty);
+                        anyUpdated = true;
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        if (anyUpdated) {
+            Toast.makeText(this, "Stock updated successfully", Toast.LENGTH_SHORT).show();
+            showStockManagement();
+        } else {
+            Toast.makeText(this, "Please enter quantities to receive", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showCategoryFilterDialog() {
+        final String[] categories = {"All categories", "Bread", "Pastry", "Cakes", "Biscuits", "Others"};
+        
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
+        builder.setTitle("Select Category");
+        builder.setItems(categories, (dialog, which) -> {
+            stockCategoryFilter = categories[which];
+            refreshStockManagement();
+        });
+        builder.show();
+    }
+
+    private void refreshStockManagement() {
+        if (llStockList == null) return;
+        llStockList.removeAllViews();
+
+        int totalItems = 0;
+        int availableUnitsTotal = 0;
+        int lowStockCount = 0;
+        int outOfStockCount = 0;
+        int inStockCount = 0;
+
+        String query = "";
+        if (etStockSearch != null) {
+            query = etStockSearch.getText().toString().trim();
+        }
+
+        Cursor cursor = dbHelper.getAllItems();
+        if (cursor != null && cursor.moveToFirst()) {
+            totalItems = cursor.getCount();
+            do {
+                int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
+                String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
+                int onHand = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ON_HAND));
+                int reserved = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RESERVED));
+                int reorderLevel = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_REORDER_LEVEL));
+                String sku = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_SKU));
+                String category = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_CATEGORY));
+                
+                int available = onHand - reserved;
+                availableUnitsTotal += available;
+                
+                boolean isLow = (available > 0 && available < reorderLevel);
+                boolean isOut = (available <= 0);
+                boolean isIn = (available >= reorderLevel);
+
+                if (isOut) outOfStockCount++;
+                else if (isLow) lowStockCount++;
+                else inStockCount++;
+
+                // Apply Search Filter
+                boolean matchesSearch = query.isEmpty() || 
+                                       name.toLowerCase().contains(query.toLowerCase()) || 
+                                       (sku != null && sku.toLowerCase().contains(query.toLowerCase()));
+                
+                // Apply Tab Filter
+                boolean matchesFilter = (stockFilterMode == 0) || 
+                                        (stockFilterMode == 1 && isIn) || 
+                                        (stockFilterMode == 2 && isLow) || 
+                                        (stockFilterMode == 3 && isOut);
+
+                // Apply Category Filter
+                boolean matchesCategory = stockCategoryFilter.equals("All categories") || 
+                                         (category != null && category.equals(stockCategoryFilter));
+
+                if (matchesSearch && matchesFilter && matchesCategory) {
+                    String skuDisplay = (sku != null ? sku : "") + (sku != null && !sku.isEmpty() ? " • " : "") + (category != null ? category : "Bakery");
+                    
+                    String status = "In stock";
+                    int statusBg = R.color.stock_in_bg;
+                    int statusText = R.color.stock_in_text;
+
+                    if (isOut) {
+                        status = "Out of stock";
+                        statusBg = R.color.stock_out_bg;
+                        statusText = R.color.stock_out_text;
+                    } else if (isLow) {
+                        status = "Low stock";
+                        statusBg = R.color.stock_low_bg;
+                        statusText = R.color.stock_low_text;
+                    }
+
+                    View row = LayoutInflater.from(this).inflate(R.layout.item_stock_row, llStockList, false);
+                    ((TextView)row.findViewById(R.id.tvStockItemName)).setText(name);
+                    ((TextView)row.findViewById(R.id.tvStockSKU)).setText(skuDisplay);
+                    ((TextView)row.findViewById(R.id.tvAvailableUnits)).setText(String.valueOf(available));
+                    ((TextView)row.findViewById(R.id.tvOnHandUnits)).setText(String.valueOf(onHand));
+                    ((TextView)row.findViewById(R.id.tvReservedUnits)).setText(String.valueOf(reserved));
+                    ((TextView)row.findViewById(R.id.tvReorderLevel)).setText("Reorder at " + reorderLevel + " units");
+                    
+                    TextView tvStatus = row.findViewById(R.id.tvStockStatus);
+                    tvStatus.setText(status);
+                    tvStatus.setBackgroundResource(statusBg);
+                    tvStatus.setTextColor(getResources().getColor(statusText, getTheme()));
+
+                    row.setOnClickListener(v -> {
+                        editingItemId = id;
+                        Cursor itemCursor = dbHelper.getReadableDatabase().query(DatabaseHelper.TABLE_ITEMS, null, DatabaseHelper.COLUMN_ID + "=?", new String[]{String.valueOf(id)}, null, null, null);
+                        if (itemCursor != null && itemCursor.moveToFirst()) {
+                            etItemName.setText(itemCursor.getString(itemCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME)));
+                            etCost.setText(String.valueOf((int)itemCursor.getDouble(itemCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COST))));
+                            etSKU.setText(itemCursor.getString(itemCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_SKU)));
+                            etCategory.setText(itemCursor.getString(itemCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_CATEGORY)));
+                            etReorderLevel.setText(String.valueOf(itemCursor.getInt(itemCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_REORDER_LEVEL))));
+                            itemCursor.close();
+                        }
+
+                        stockManagementLayout.setVisibility(View.GONE);
+                        addItemLayout.setVisibility(View.VISIBLE);
+                    });
+                    
+                    llStockList.addView(row);
+                }
+            } while (cursor.moveToNext());
+            cursor.close();
+        }
+
+        // Update Stats and Filter Labels
+        ((TextView)stockManagementLayout.findViewById(R.id.tvTotalItems)).setText(String.valueOf(totalItems));
+        ((TextView)stockManagementLayout.findViewById(R.id.tvAvailableStock)).setText(String.valueOf(availableUnitsTotal));
+        ((TextView)stockManagementLayout.findViewById(R.id.tvLowStock)).setText(String.valueOf(lowStockCount));
+        ((TextView)stockManagementLayout.findViewById(R.id.tvOutOfStock)).setText(String.valueOf(outOfStockCount));
+        ((TextView)stockManagementLayout.findViewById(R.id.tvStockItemsCount)).setText(totalItems + " items");
+
+        TextView tvFilterAll = stockManagementLayout.findViewById(R.id.tvFilterAll);
+        TextView tvFilterIn = stockManagementLayout.findViewById(R.id.tvFilterInStock);
+        TextView tvFilterLow = stockManagementLayout.findViewById(R.id.tvFilterLowStock);
+        TextView tvFilterOut = stockManagementLayout.findViewById(R.id.tvFilterOutOfStock);
+
+        tvFilterAll.setText("All " + totalItems);
+        tvFilterIn.setText("In stock " + inStockCount);
+        tvFilterLow.setText("Low stock " + lowStockCount);
+        tvFilterOut.setText("Out of stock " + outOfStockCount);
+
+        // Update Category Label
+        ((TextView)stockManagementLayout.findViewById(R.id.tvCategoryFilter)).setText("Bakery - " + stockCategoryFilter + " ▾");
+
+        // Update Filter Styles
+        updateStockFilterStyles(tvFilterAll, tvFilterIn, tvFilterLow, tvFilterOut);
+        
+        TextView tvAlertTitle = stockManagementLayout.findViewById(R.id.tvAlertTitle);
+        TextView tvAlertDesc = stockManagementLayout.findViewById(R.id.tvAlertDesc);
+        View alertBox = stockManagementLayout.findViewById(R.id.llAlertBox);
+        int needReplenishment = lowStockCount + outOfStockCount;
+        
+        if (needReplenishment > 0 && alertBox != null) {
+            tvAlertTitle.setText(needReplenishment + " items need replenishment");
+            tvAlertDesc.setText(lowStockCount + " low stock - " + outOfStockCount + " out of stock. Use Add GRN to update.");
+            alertBox.setVisibility(View.VISIBLE);
+        } else if (alertBox != null) {
+            alertBox.setVisibility(View.GONE);
+        }
+        
+        SimpleDateFormat sdf = new SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault());
+        ((TextView)stockManagementLayout.findViewById(R.id.tvInventoryDate)).setText(sdf.format(new Date()));
+
+        stockManagementLayout.findViewById(R.id.btnViewGRNHistory).setOnClickListener(v -> showGRNHistoryDialog());
+    }
+
+    private void showGRNHistoryDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("GRN Transaction History");
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(32, 32, 32, 32);
+
+        ScrollView scrollView = new ScrollView(this);
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+
+        Cursor cursor = dbHelper.getGRNHistory();
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                String date = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_GRN_DATE));
+                String itemName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
+                int qty = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_GRN_QUANTITY));
+
+                View row = LayoutInflater.from(this).inflate(R.layout.item_transaction_row, content, false);
+                ((TextView)row.findViewById(R.id.tvTransactionDate)).setText(date);
+                ((TextView)row.findViewById(R.id.tvTransactionItems)).setText("Received " + qty + " units of " + itemName);
+                ((TextView)row.findViewById(R.id.tvTransactionTotal)).setText("+" + qty);
+                ((TextView)row.findViewById(R.id.tvTransactionTotal)).setTextColor(getResources().getColor(R.color.revenue_text, getTheme()));
+                ((TextView)row.findViewById(R.id.tvTransactionStatus)).setText("RESTOCK");
+                ((TextView)row.findViewById(R.id.tvTransactionStatus)).setTextColor(getResources().getColor(R.color.stockroom_teal, getTheme()));
+                
+                content.addView(row);
+                
+                View divider = new View(this);
+                divider.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1));
+                divider.setBackgroundColor(Color.LTGRAY);
+                content.addView(divider);
+            } while (cursor.moveToNext());
+            cursor.close();
+        } else {
+            TextView tvEmpty = new TextView(this);
+            tvEmpty.setText("No GRN history found.");
+            tvEmpty.setPadding(0, 20, 0, 20);
+            content.addView(tvEmpty);
+        }
+
+        scrollView.addView(content);
+        layout.addView(scrollView);
+        builder.setView(layout);
+        builder.setPositiveButton("Close", null);
+        builder.show();
+    }
+
+    private void updateStockFilterStyles(TextView all, TextView in, TextView low, TextView out) {
+        all.setBackgroundResource(stockFilterMode == 0 ? R.drawable.bg_filter_selected_teal : R.drawable.bg_filter_unselected);
+        all.setTextColor(getResources().getColor(stockFilterMode == 0 ? R.color.stockroom_teal : R.color.text_grey, getTheme()));
+
+        in.setBackgroundResource(stockFilterMode == 1 ? R.drawable.bg_filter_selected_teal : R.drawable.bg_filter_unselected);
+        in.setTextColor(getResources().getColor(stockFilterMode == 1 ? R.color.stockroom_teal : R.color.text_grey, getTheme()));
+
+        low.setBackgroundResource(stockFilterMode == 2 ? R.drawable.bg_filter_selected_teal : R.drawable.bg_filter_unselected);
+        low.setTextColor(getResources().getColor(stockFilterMode == 2 ? R.color.stockroom_teal : R.color.text_grey, getTheme()));
+
+        out.setBackgroundResource(stockFilterMode == 3 ? R.drawable.bg_filter_selected_teal : R.drawable.bg_filter_unselected);
+        out.setTextColor(getResources().getColor(stockFilterMode == 3 ? R.color.stockroom_teal : R.color.text_grey, getTheme()));
+    }
+
+    private void showAddGRNDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Add GRN (Goods Received Note)");
+
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_grn, null);
+        LinearLayout llGRNItems = view.findViewById(R.id.llGRNItems);
+
+        Cursor cursor = dbHelper.getAllItems();
+        Map<Integer, EditText> inputMap = new HashMap<>();
+
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
+                String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
+
+                View itemRow = LayoutInflater.from(this).inflate(R.layout.item_grn_input, llGRNItems, false);
+                ((TextView)itemRow.findViewById(R.id.tvItemName)).setText(name);
+                EditText etQty = itemRow.findViewById(R.id.etReceivedQty);
+                inputMap.put(id, etQty);
+                llGRNItems.addView(itemRow);
+            } while (cursor.moveToNext());
+            cursor.close();
+        }
+
+        builder.setView(view);
+        builder.setPositiveButton("Receive All", (dialog, which) -> {
+            boolean anyUpdated = false;
+            for (Map.Entry<Integer, EditText> entry : inputMap.entrySet()) {
+                String qtyStr = entry.getValue().getText().toString().trim();
+                if (!qtyStr.isEmpty()) {
+                    int qty = Integer.parseInt(qtyStr);
+                    if (qty > 0) {
+                        dbHelper.updateStock(entry.getKey(), qty);
+                        anyUpdated = true;
+                    }
+                }
+            }
+            if (anyUpdated) {
+                Toast.makeText(this, "Stock updated successfully", Toast.LENGTH_SHORT).show();
+                refreshStockManagement();
+            }
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
     }
 
     @Override

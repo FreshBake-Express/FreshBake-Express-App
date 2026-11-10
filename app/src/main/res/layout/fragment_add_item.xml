@@ -116,6 +116,67 @@
                 android:textColor="#1E293B"
                 android:textSize="16sp" />
 
+            <!-- SKU -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="SKU"
+                android:textColor="@color/black"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/etSKU"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_field"
+                android:hint="e.g. BK-001"
+                android:paddingHorizontal="16dp"
+                android:textColor="#1E293B"
+                android:textSize="16sp" />
+
+            <!-- Category -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Category"
+                android:textColor="@color/black"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/etCategory"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_field"
+                android:hint="e.g. Bakery"
+                android:paddingHorizontal="16dp"
+                android:textColor="#1E293B"
+                android:textSize="16sp" />
+
+            <!-- Reorder Level -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Reorder Level"
+                android:textColor="@color/black"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/etReorderLevel"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_field"
+                android:hint="Default is 15"
+                android:inputType="number"
+                android:paddingHorizontal="16dp"
+                android:textColor="#1E293B"
+                android:textSize="16sp" />
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingVertical="8dp">
+
+    <TextView
+        android:id="@+id/tvItemName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Baguette"
+        android:textColor="@color/black"
+        android:textSize="16sp" />
+
+    <EditText
+        android:id="@+id/etReceivedQty"
+        android:layout_width="80dp"
+        android:layout_height="40dp"
+        android:background="@drawable/bg_input_light"
+        android:gravity="center"
+        android:hint="0"
+        android:inputType="number"
+        android:paddingHorizontal="8dp"
+        android:textSize="14sp" />
+
+</LinearLayout>

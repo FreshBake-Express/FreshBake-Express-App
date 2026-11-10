@@ -17,6 +17,10 @@
         <item
             android:id="@+id/nav_items"
             android:icon="@drawable/ic_stock"
+            android:title="Products" />
+        <item
+            android:id="@+id/nav_product"
+            android:icon="@drawable/ic_stock"
             android:title="Stock &amp; Inventory" />
     </group>
 

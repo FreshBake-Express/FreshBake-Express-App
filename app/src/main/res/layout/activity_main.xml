@@ -35,8 +35,10 @@
             android:id="@+id/addCustomerLayout"
             layout="@layout/fragment_add_customer"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="gone" />
+            android:layout_height="0dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <include
             android:id="@+id/historyLayout"
@@ -75,6 +77,15 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <include
+            android:id="@+id/stockManagementLayout"
+            layout="@layout/fragment_stock_management"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <include
             android:id="@+id/settingsLayout"
             layout="@layout/fragment_settings"
             android:layout_width="match_parent"
@@ -87,8 +98,19 @@
             android:id="@+id/addItemLayout"
             layout="@layout/fragment_add_item"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="gone" />
+            android:layout_height="0dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <include
+            android:id="@+id/addGRNLayout"
+            layout="@layout/fragment_add_grn"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
