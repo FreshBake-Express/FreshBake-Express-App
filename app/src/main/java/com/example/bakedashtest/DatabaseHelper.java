@@ -481,7 +481,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public Cursor getOrderItems(int orderId) {
         SQLiteDatabase db = this.getReadableDatabase();
-        String query = "SELECT oi.*, i." + COLUMN_ITEM_NAME + " FROM " + TABLE_ORDER_ITEMS + " oi " +
+        String query = "SELECT oi.*, i." + COLUMN_ITEM_NAME + ", i." + COLUMN_ON_HAND + " FROM " + TABLE_ORDER_ITEMS + " oi " +
                 "JOIN " + TABLE_ITEMS + " i ON oi." + COLUMN_OI_ITEM_ID + " = i." + COLUMN_ID + " " +
                 "WHERE oi." + COLUMN_OI_ORDER_ID + " = ?";
         return db.rawQuery(query, new String[]{String.valueOf(orderId)});

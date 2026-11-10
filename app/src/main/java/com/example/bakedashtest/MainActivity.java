@@ -678,12 +678,13 @@ public class MainActivity extends AppCompatActivity {
                 int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
                 String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
                 double cost = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COST));
+                int onHand = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ON_HAND));
 
                 itemPrices.put(id, cost);
                 deliveryQuantities.put(id, 0);
 
                 View row = LayoutInflater.from(this).inflate(R.layout.item_delivery_row, llDeliveryItemsList, false);
-                setupDeliveryItemRow(row, id, name, cost);
+                setupDeliveryItemRow(row, id, name, cost, onHand);
                 llDeliveryItemsList.addView(row);
 
                 // Add a divider
@@ -700,7 +701,7 @@ public class MainActivity extends AppCompatActivity {
         updateDeliveryTotals();
     }
 
-    private void setupDeliveryItemRow(View row, int id, String name, double price) {
+    private void setupDeliveryItemRow(View row, int id, String name, double price, int stock) {
         TextView tvName = row.findViewById(R.id.itemName);
         TextView tvPriceDisplay = row.findViewById(R.id.itemPriceDisplay);
         EditText etQuantity = row.findViewById(R.id.quantity);
@@ -710,7 +711,7 @@ public class MainActivity extends AppCompatActivity {
 
         tvName.setText(name);
         if (tvPriceDisplay != null) {
-            tvPriceDisplay.setText("Price: " + (int) price);
+            tvPriceDisplay.setText("Price: " + (int) price + "/" + stock);
         }
         etQuantity.setText("0");
         tvTotal.setText("0");
@@ -1337,6 +1338,7 @@ public class MainActivity extends AppCompatActivity {
                 String itemName = itemsCursor.getString(itemsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
                 int qty = itemsCursor.getInt(itemsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OI_QUANTITY));
                 double price = itemsCursor.getDouble(itemsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OI_PRICE));
+                int stock = itemsCursor.getInt(itemsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ON_HAND));
 
                 editOrderQuantities.put(itemId, qty);
                 editOrderPrices.put(itemId, price);
@@ -1344,7 +1346,7 @@ public class MainActivity extends AppCompatActivity {
                 View itemView;
                 if (isEditingBill) {
                     itemView = LayoutInflater.from(this).inflate(R.layout.item_delivery_row, llBillItemsList, false);
-                    setupEditBillItemRow(itemView, itemId, itemName, price, qty);
+                    setupEditBillItemRow(itemView, itemId, itemName, price, qty, stock);
                 } else {
                     itemView = LayoutInflater.from(this).inflate(R.layout.item_transaction_row, llBillItemsList, false);
                     TextView nameTv = itemView.findViewById(R.id.tvTransactionDate);
@@ -1368,7 +1370,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void setupEditBillItemRow(View row, int itemId, String name, double price, int initialQty) {
+    private void setupEditBillItemRow(View row, int itemId, String name, double price, int initialQty, int stock) {
         TextView tvName = row.findViewById(R.id.itemName);
         TextView tvPrice = row.findViewById(R.id.itemPriceDisplay);
         TextView tvTotal = row.findViewById(R.id.itemTotal);
@@ -1377,7 +1379,9 @@ public class MainActivity extends AppCompatActivity {
         TextView btnPlus = row.findViewById(R.id.btnPlus);
 
         tvName.setText(name);
-        tvPrice.setText("Price: " + (int) price);
+        if (tvPrice != null) {
+            tvPrice.setText("Price: " + (int) price + "/" + stock);
+        }
         etQty.setText(String.valueOf(initialQty));
         tvTotal.setText(String.valueOf((int) (initialQty * price)));
 
