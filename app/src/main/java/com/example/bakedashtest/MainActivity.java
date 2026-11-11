@@ -22,7 +22,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.drawerlayout.widget.DrawerLayout;
-import com.google.android.material.navigation.NavigationView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.appcompat.app.ActionBarDrawerToggle;
@@ -41,6 +40,7 @@ import android.view.MotionEvent;
 import android.view.inputmethod.InputMethodManager;
 import android.graphics.Rect;
 import android.content.Context;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.webkit.WebView;
@@ -61,7 +61,12 @@ public class MainActivity extends AppCompatActivity {
     private int editingItemId = -1;
     private TextView tvAddCustomerTitle;
     private DrawerLayout drawerLayout;
-    private NavigationView navigationView;
+    private Toolbar toolbar;
+    private View navDrawerContainer;
+
+    // Custom Nav Items
+    private LinearLayout navDeliveryBilling, navCustomers, navHistoryReports, navProducts, navStockInventory, navSettings, navHelpSupport, btnLogout;
+    private List<LinearLayout> navItemsList = new ArrayList<>();
 
     // Form fields
     private EditText etFirstName, etLastName, etStoreName, etContactNumber, etAddress, etOldBillAmount;
@@ -129,11 +134,32 @@ public class MainActivity extends AppCompatActivity {
         llItemsList = findViewById(R.id.llItemsList);
         tvCustomerCount = findViewById(R.id.tvCustomerCount);
         tvAddCustomerTitle = findViewById(R.id.tvAddCustomerTitle);
-        drawerLayout = findViewById(R.id.drawer_layout);
-        navigationView = findViewById(R.id.navigationView);
+        drawerLayout = findViewById(R.id.drawerLayout);
+        toolbar = findViewById(R.id.toolbar);
+        navDrawerContainer = findViewById(R.id.navDrawerContainer);
 
-        // Header Menu Buttons
-        View headerView = navigationView.getHeaderView(0);
+        setSupportActionBar(toolbar);
+        toolbar.setNavigationOnClickListener(v -> drawerLayout.openDrawer(GravityCompat.START));
+
+        // Initialize Custom Nav Items
+        navDeliveryBilling = findViewById(R.id.navDeliveryBilling);
+        navCustomers = findViewById(R.id.navCustomers);
+        navHistoryReports = findViewById(R.id.navHistoryReports);
+        navProducts = findViewById(R.id.navProducts);
+        navStockInventory = findViewById(R.id.navStockInventory);
+        navSettings = findViewById(R.id.navSettings);
+        navHelpSupport = findViewById(R.id.navHelpSupport);
+        btnLogout = findViewById(R.id.btnLogout);
+
+        navItemsList.add(navDeliveryBilling);
+        navItemsList.add(navCustomers);
+        navItemsList.add(navHistoryReports);
+        navItemsList.add(navProducts);
+        navItemsList.add(navStockInventory);
+        navItemsList.add(navSettings);
+        navItemsList.add(navHelpSupport);
+
+        setupNavigationClickListeners();
 
         deliveryLayout = findViewById(R.id.deliveryLayout);
         customersLayout = findViewById(R.id.customersLayout);
@@ -358,56 +384,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Initial load for delivery items
         refreshDeliveryItems();
-
-        navigationView.setNavigationItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            hideAllLayouts();
-
-            if (itemId == R.id.nav_delivery) {
-                deliveryLayout.setVisibility(View.VISIBLE);
-                refreshDeliveryItems();
-            } else if (itemId == R.id.nav_customers) {
-                customersLayout.setVisibility(View.VISIBLE);
-                refreshCustomers();
-            } else if (itemId == R.id.nav_history) {
-                historyLayout.setVisibility(View.VISIBLE);
-                updateHistoryTabs();
-                refreshHistory();
-            } else if (itemId == R.id.nav_items) {
-                itemsLayout.setVisibility(View.VISIBLE);
-                refreshItems();
-            } else if (itemId == R.id.nav_product) {
-                showStockManagement();
-            }
-            
-            drawerLayout.closeDrawer(GravityCompat.START);
-            return true;
-        });
-
-        // Bottom Navigation Buttons
-        navigationView.findViewById(R.id.btnNavSettings).setOnClickListener(v -> {
-            hideAllLayouts();
-            settingsLayout.setVisibility(View.VISIBLE);
-            drawerLayout.closeDrawer(GravityCompat.START);
-        });
-
-        navigationView.findViewById(R.id.btnNavHelp).setOnClickListener(v -> {
-            Toast.makeText(this, "Help & Support coming soon", Toast.LENGTH_SHORT).show();
-            drawerLayout.closeDrawer(GravityCompat.START);
-        });
-
-        navigationView.findViewById(R.id.btnNavLogout).setOnClickListener(v -> {
-            drawerLayout.closeDrawer(GravityCompat.START);
-            new androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("Logout")
-                    .setMessage("Are you sure you want to logout?")
-                    .setPositiveButton("Logout", (dialog, which) -> finish())
-                    .setNegativeButton("Cancel", null)
-                    .show();
-        });
-
-        // Set default selection
-        navigationView.setCheckedItem(R.id.nav_delivery);
+        selectNavItem(navDeliveryBilling); // Set default active state
 
         findViewById(R.id.btnSaveBill).setOnClickListener(v -> saveCurrentBill(false));
 
@@ -561,11 +538,36 @@ public class MainActivity extends AppCompatActivity {
         refreshItems();
         refreshCustomers();
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.drawer_layout), (v, insets) -> {
+        // Handle Window Insets for Edge-to-Edge
+        ViewCompat.setOnApplyWindowInsetsListener(toolbar, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom);
+            v.setPadding(0, systemBars.top, 0, 0);
             return insets;
         });
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.fragmentContainer), (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(0, 0, 0, systemBars.bottom);
+            return insets;
+        });
+
+        if (navDrawerContainer != null) {
+            final View navHeader = findViewById(R.id.navHeader);
+            ViewCompat.setOnApplyWindowInsetsListener(navDrawerContainer, (v, insets) -> {
+                Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+                if (navHeader != null) {
+                    float density = getResources().getDisplayMetrics().density;
+                    // Apply status bar height + extra padding to the header to prevent clipping
+                    int topPadding = systemBars.top + (int) (28 * density);
+                    int sidePadding = (int) (18 * density);
+                    int bottomPadding = (int) (16 * density);
+                    navHeader.setPadding(sidePadding, topPadding, sidePadding, bottomPadding);
+                }
+                // Handle navigation bar insets at the bottom of the drawer
+                v.setPadding(0, 0, 0, systemBars.bottom);
+                return insets;
+            });
+        }
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -581,6 +583,97 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private void setupNavigationClickListeners() {
+        navDeliveryBilling.setOnClickListener(v -> {
+            selectNavItem(navDeliveryBilling);
+            hideAllLayouts();
+            deliveryLayout.setVisibility(View.VISIBLE);
+            toolbar.setTitle("Delivery & Billing");
+            refreshDeliveryItems();
+            drawerLayout.closeDrawer(GravityCompat.START);
+        });
+
+        navCustomers.setOnClickListener(v -> {
+            selectNavItem(navCustomers);
+            hideAllLayouts();
+            customersLayout.setVisibility(View.VISIBLE);
+            toolbar.setTitle("Customers");
+            refreshCustomers();
+            drawerLayout.closeDrawer(GravityCompat.START);
+        });
+
+        navHistoryReports.setOnClickListener(v -> {
+            selectNavItem(navHistoryReports);
+            hideAllLayouts();
+            historyLayout.setVisibility(View.VISIBLE);
+            toolbar.setTitle("History & Reports");
+            updateHistoryTabs();
+            refreshHistory();
+            drawerLayout.closeDrawer(GravityCompat.START);
+        });
+
+        navProducts.setOnClickListener(v -> {
+            selectNavItem(navProducts);
+            hideAllLayouts();
+            itemsLayout.setVisibility(View.VISIBLE);
+            toolbar.setTitle("Manage Products");
+            refreshItems();
+            drawerLayout.closeDrawer(GravityCompat.START);
+        });
+
+        navStockInventory.setOnClickListener(v -> {
+            selectNavItem(navStockInventory);
+            toolbar.setTitle("Stock & Inventory");
+            showStockManagement();
+            drawerLayout.closeDrawer(GravityCompat.START);
+        });
+
+        navSettings.setOnClickListener(v -> {
+            selectNavItem(navSettings);
+            hideAllLayouts();
+            settingsLayout.setVisibility(View.VISIBLE);
+            toolbar.setTitle("Settings");
+            drawerLayout.closeDrawer(GravityCompat.START);
+        });
+
+        navHelpSupport.setOnClickListener(v -> {
+            Toast.makeText(this, "Help & Support coming soon", Toast.LENGTH_SHORT).show();
+            drawerLayout.closeDrawer(GravityCompat.START);
+        });
+
+        btnLogout.setOnClickListener(v -> {
+            drawerLayout.closeDrawer(GravityCompat.START);
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("End Shift")
+                    .setMessage("Are you sure you want to end your shift and logout?")
+                    .setPositiveButton("End Shift", (dialog, which) -> finish())
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        });
+    }
+
+    private void selectNavItem(LinearLayout selectedItem) {
+        for (LinearLayout item : navItemsList) {
+            boolean isActive = (item == selectedItem);
+            item.setBackgroundResource(isActive ? R.drawable.bg_nav_item_active : R.drawable.bg_nav_item_normal);
+            
+            // Update child views (Icon and Text)
+            // Assuming icon is inside a FrameLayout, which is the first child
+            // And label is the second child (TextView)
+            for (int i = 0; i < item.getChildCount(); i++) {
+                View child = item.getChildAt(i);
+                if (child instanceof FrameLayout) {
+                    ImageView icon = (ImageView) ((FrameLayout) child).getChildAt(0);
+                    if (icon != null) {
+                        icon.setColorFilter(getResources().getColor(isActive ? R.color.emerald_header_top : R.color.drawer_icon_inactive, getTheme()));
+                    }
+                } else if (child instanceof TextView) {
+                    ((TextView) child).setTextColor(getResources().getColor(isActive ? R.color.emerald_header_top : R.color.drawer_text_inactive, getTheme()));
+                }
+            }
+        }
     }
 
     private void updateDeliveryDate() {
@@ -1716,8 +1809,9 @@ public class MainActivity extends AppCompatActivity {
 
         hideAllLayouts();
         deliveryLayout.setVisibility(View.VISIBLE);
+        toolbar.setTitle("Delivery & Billing");
         
-        navigationView.setCheckedItem(R.id.nav_delivery);
+        selectNavItem(navDeliveryBilling);
         
         refreshDeliveryItems();
     }

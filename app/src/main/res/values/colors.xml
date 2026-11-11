@@ -1,47 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="primary_green">#1D5B3A</color>
-    <color name="primary_green_light">#F0F9F4</color>
-    <color name="revenue_bg">#F0F9F4</color>
-    <color name="revenue_text">#1D5B3A</color>
-    <color name="bills_bg">#FFFFFF</color>
-    <color name="due_bg">#FFF9F0</color>
-    <color name="due_text">#B45309</color>
-    <color name="light_green_bg">#F2F9F3</color>
-    <color name="light_green_border">#D0E7D2</color>
-    <color name="text_grey">#64748B</color>
-    <color name="text_dark">#1E293B</color>
-    <color name="divider_grey">#E2E8F0</color>
-    <color name="item_bg_grey">#F8FAFC</color>
-    <color name="search_bg">#F1F5F9</color>
-    <color name="nav_item_color">#94A3B8</color>
-    <color name="drawer_bg">#111827</color>
-    <color name="header_bg">#064E3B</color>
-    <color name="active_nav_green">#10B981</color>
-    <color name="nav_item_tint_normal">#94A3B8</color>
-    <color name="nav_text_inactive">#94A3B8</color>
-    <!-- Final Navigation Design Colors -->
-    <color name="nav_drawer_black">#000000</color>
-    <color name="nav_header_green">#064E3B</color>
-    <color name="nav_header_subtext">#A5D6A7</color>
-    <color name="nav_active_green_selected">#16A34A</color>
-    <color name="nav_selected_bg">#e8f5e9</color>
-    <color name="nav_selected_text">#16A34A</color>
-    <color name="nav_text_white">#FFFFFF</color>
-    <color name="nav_logout_bg">#FEE2E2</color>
-    <color name="nav_logout_text">#DC2626</color>
+    <!-- Refined Emerald Palette -->
+    <color name="emerald_primary">#10B981</color>
+    <color name="emerald_bright">#22C55E</color>
+    <color name="emerald_pressed">#059669</color>
+    <color name="emerald_header_top">#042F24</color>
+    <color name="emerald_header_mid">#065F46</color>
+    <color name="emerald_soft_text">#6EE7B7</color>
+    <color name="emerald_tint_bg">#ECFDF5</color>
 
-    <!-- Stock Management Colors -->
-    <color name="stock_in_bg">#F0FDF4</color>
-    <color name="stock_in_text">#166534</color>
+    <!-- Dark Slate-Navy Drawer Surfaces -->
+    <color name="drawer_bg">#0F172A</color>
+    <color name="drawer_bg_deep">#0B1322</color>
+    <color name="drawer_divider">#1E293B</color>
+    <color name="drawer_icon_box">#1E293B</color>
+    <color name="drawer_section_lbl">#64748B</color>
+    <color name="drawer_text_inactive">#CBD5E1</color>
+    <color name="drawer_icon_inactive">#94A3B8</color>
+    <color name="drawer_ripple">#22FFFFFF</color>
+
+    <!-- Logout Action -->
+    <color name="logout_bg">#2A1420</color>
+    <color name="logout_stroke">#5C1D2E</color>
+    <color name="logout_fg">#FDA4AF</color>
+    <color name="logout_ripple">#22F43F5E</color>
+
+    <!-- Light Screen Surfaces -->
+    <color name="screen_bg">#F8FAFC</color>
+    <color name="card_bg">#FFFFFF</color>
+    <color name="card_border">#E2E8F0</color>
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#64748B</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#FF000000</color>
+
+    <!-- Legacy compatibility colors -->
+    <color name="primary_green">#10B981</color>
+    <color name="primary_green_light">#D1FAE5</color>
+    <color name="revenue_text">#059669</color>
+    <color name="text_grey">#64748B</color>
+    <color name="text_dark">#0F172A</color>
+    <color name="due_text">#E11D48</color>
+    <color name="divider_grey">#E2E8F0</color>
+    <color name="stockroom_teal">#0D9488</color>
+    <color name="stock_in_bg">#F0FDFA</color>
+    <color name="stock_in_text">#0D9488</color>
+    <color name="stock_out_bg">#FFF1F2</color>
+    <color name="stock_out_text">#E11D48</color>
     <color name="stock_low_bg">#FFF7ED</color>
-    <color name="stock_low_text">#9A3412</color>
-    <color name="stock_out_bg">#FEF2F2</color>
-    <color name="stock_out_text">#991B1B</color>
-    <color name="alert_bg">#FFFBEB</color>
-    <color name="alert_text">#92400E</color>
-    <color name="grn_button_bg">#0D9488</color>
-    <color name="stockroom_teal">#0F766E</color>
+    <color name="stock_low_text">#EA580C</color>
+
+    <!-- Additional compatibility colors -->
+    <color name="nav_text_inactive">#94A3B8</color>
+    <color name="alert_bg">#FFF1F2</color>
+    <color name="alert_text">#E11D48</color>
+    <color name="light_green_bg">#ECFDF5</color>
+    <color name="light_green_border">#10B981</color>
+    <color name="item_bg_grey">#F1F5F9</color>
+    <color name="active_nav_green">#10B981</color>
+    <color name="due_bg">#FFF1F2</color>
+    <color name="revenue_bg">#F0FDFA</color>
+    <color name="nav_logout_text">#FDA4AF</color>
+    <color name="nav_active_green_selected">#10B981</color>
+    <color name="nav_header_green">#6EE7B7</color>
+    <color name="nav_header_subtext">#6EE7B7</color>
 </resources>
