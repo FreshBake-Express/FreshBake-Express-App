@@ -134,7 +134,6 @@ public class MainActivity extends AppCompatActivity {
 
         // Header Menu Buttons
         View headerView = navigationView.getHeaderView(0);
-        headerView.findViewById(R.id.btnCloseDrawer).setOnClickListener(v -> drawerLayout.closeDrawer(GravityCompat.START));
 
         deliveryLayout = findViewById(R.id.deliveryLayout);
         customersLayout = findViewById(R.id.customersLayout);
@@ -379,19 +378,32 @@ public class MainActivity extends AppCompatActivity {
                 refreshItems();
             } else if (itemId == R.id.nav_product) {
                 showStockManagement();
-            } else if (itemId == R.id.nav_settings) {
-                settingsLayout.setVisibility(View.VISIBLE);
-            } else if (itemId == R.id.nav_logout) {
-                new androidx.appcompat.app.AlertDialog.Builder(this)
-                        .setTitle("Logout")
-                        .setMessage("Are you sure you want to logout?")
-                        .setPositiveButton("Logout", (dialog, which) -> finish())
-                        .setNegativeButton("Cancel", null)
-                        .show();
             }
             
             drawerLayout.closeDrawer(GravityCompat.START);
             return true;
+        });
+
+        // Bottom Navigation Buttons
+        navigationView.findViewById(R.id.btnNavSettings).setOnClickListener(v -> {
+            hideAllLayouts();
+            settingsLayout.setVisibility(View.VISIBLE);
+            drawerLayout.closeDrawer(GravityCompat.START);
+        });
+
+        navigationView.findViewById(R.id.btnNavHelp).setOnClickListener(v -> {
+            Toast.makeText(this, "Help & Support coming soon", Toast.LENGTH_SHORT).show();
+            drawerLayout.closeDrawer(GravityCompat.START);
+        });
+
+        navigationView.findViewById(R.id.btnNavLogout).setOnClickListener(v -> {
+            drawerLayout.closeDrawer(GravityCompat.START);
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("Logout")
+                    .setMessage("Are you sure you want to logout?")
+                    .setPositiveButton("Logout", (dialog, which) -> finish())
+                    .setNegativeButton("Cancel", null)
+                    .show();
         });
 
         // Set default selection
