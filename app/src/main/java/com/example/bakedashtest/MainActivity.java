@@ -39,6 +39,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.inputmethod.InputMethodManager;
 import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.content.Context;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -81,8 +82,9 @@ public class MainActivity extends AppCompatActivity {
     private int selectedCustomerId = -1;
     private LinearLayout llDeliveryItemsList;
     private View cardPaymentDetails, rlDeliveryTotal, llDeliveryButtons;
-    private TextView tvDeliveryTotal, tvPrevArrears, tvTotalDue, tvRemainingBalance;
+    private TextView tvDeliveryTotal, tvPrevArrears, tvTotalDue, tvRemainingBalance, tvFullPayHelper;
     private EditText etPaymentAmount;
+    private ImageView btnClearSelection;
     private Map<Integer, Integer> deliveryQuantities = new HashMap<>();
     private Map<Integer, Double> itemPrices = new HashMap<>();
 
@@ -120,6 +122,16 @@ public class MainActivity extends AppCompatActivity {
     private double currentBillArrears = 0;
     private Map<Integer, Integer> editOrderQuantities = new HashMap<>();
     private Map<Integer, Double> editOrderPrices = new HashMap<>();
+
+    // Customers Section Fields
+    private TextView tvTotalClientsKpi, tvWithDueKpi, tvTotalReceivableKpi;
+    private TextView filterAll, filterDue, filterSettled, tvCustomerListHeader;
+    private View llSearchContainer;
+    private ImageView ivSearchIcon;
+    private int customerFilterMode = 0; // 0: All, 1: Due, 2: Settled
+
+    // Preview fields
+    private TextView tvPreviewInitials, tvPreviewName, tvPreviewStore, tvPreviewPhone;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -206,6 +218,22 @@ public class MainActivity extends AppCompatActivity {
         etAddress = findViewById(R.id.etAddress);
         etOldBillAmount = findViewById(R.id.etOldBillAmount);
 
+        // Preview Fields Initialization
+        tvPreviewInitials = findViewById(R.id.previewAvatar);
+        tvPreviewName = findViewById(R.id.previewName);
+        tvPreviewStore = findViewById(R.id.previewStore);
+
+        TextWatcher previewWatcher = new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(Editable s) {
+                updateCustomerPreview();
+            }
+        };
+        etFirstName.addTextChangedListener(previewWatcher);
+        etLastName.addTextChangedListener(previewWatcher);
+        etStoreName.addTextChangedListener(previewWatcher);
+
         // Add Item Form Fields
         etItemName = findViewById(R.id.etItemName);
         etCost = findViewById(R.id.etCost);
@@ -223,6 +251,15 @@ public class MainActivity extends AppCompatActivity {
                 @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
                 @Override public void afterTextChanged(Editable s) {
                     refreshCustomers();
+                }
+            });
+
+            etCustomerListSearch.setOnFocusChangeListener((v, hasFocus) -> {
+                if (llSearchContainer != null) {
+                    llSearchContainer.setBackgroundResource(hasFocus ? R.drawable.bg_search_focused : R.drawable.bg_search_floating);
+                }
+                if (ivSearchIcon != null) {
+                    ivSearchIcon.setColorFilter(hasFocus ? getResources().getColor(R.color.emerald_bright, getTheme()) : getResources().getColor(R.color.emerald_primary, getTheme()));
                 }
             });
         }
@@ -262,6 +299,41 @@ public class MainActivity extends AppCompatActivity {
         tvTotalDue = findViewById(R.id.tvTotalDue);
         tvRemainingBalance = findViewById(R.id.tvRemainingBalance);
         etPaymentAmount = findViewById(R.id.etPaymentAmount);
+        tvFullPayHelper = findViewById(R.id.tvFullPayHelper);
+        btnClearSelection = findViewById(R.id.btnClearSelection);
+
+        if (tvFullPayHelper != null) {
+            tvFullPayHelper.setOnClickListener(v -> {
+                try {
+                    String totalDueStr = tvTotalDue.getText().toString().replace("Rs. ", "").replace(",", "").trim();
+                    double totalDue = Double.parseDouble(totalDueStr);
+                    etPaymentAmount.setText(String.valueOf((int) totalDue));
+                } catch (Exception e) {
+                    Toast.makeText(this, "Error calculating full pay", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        if (btnClearSelection != null) {
+            btnClearSelection.setOnClickListener(v -> resetDeliveryScreen());
+        }
+
+        // Customers Section Initializations
+        tvTotalClientsKpi = findViewById(R.id.tvTotalClientsKpi);
+        tvWithDueKpi = findViewById(R.id.tvWithDueKpi);
+        tvTotalReceivableKpi = findViewById(R.id.tvTotalReceivableKpi);
+        filterAll = findViewById(R.id.filterAll);
+        filterDue = findViewById(R.id.filterDue);
+        filterSettled = findViewById(R.id.filterSettled);
+        tvCustomerListHeader = findViewById(R.id.tvCustomerListHeader);
+        llSearchContainer = findViewById(R.id.llSearchContainer);
+        ivSearchIcon = findViewById(R.id.ivSearchIcon);
+
+        if (filterAll != null) {
+            filterAll.setOnClickListener(v -> { customerFilterMode = 0; updateCustomerFilterStyles(); refreshCustomers(); });
+            filterDue.setOnClickListener(v -> { customerFilterMode = 1; updateCustomerFilterStyles(); refreshCustomers(); });
+            filterSettled.setOnClickListener(v -> { customerFilterMode = 2; updateCustomerFilterStyles(); refreshCustomers(); });
+        }
 
         // History Section Initializations
         tvStatRevenue = findViewById(R.id.tvStatRevenue);
@@ -339,7 +411,7 @@ public class MainActivity extends AppCompatActivity {
         };
         findViewById(R.id.btnBottomPrint).setOnClickListener(printAction);
 
-        findViewById(R.id.btnPrintBill).setOnClickListener(v -> {
+        findViewById(R.id.btnSaveAndPrintBill).setOnClickListener(v -> {
             if (selectedCustomerId == -1) {
                 Toast.makeText(this, "Please select a customer first", Toast.LENGTH_SHORT).show();
                 return;
@@ -386,12 +458,13 @@ public class MainActivity extends AppCompatActivity {
         refreshDeliveryItems();
         selectNavItem(navDeliveryBilling); // Set default active state
 
-        findViewById(R.id.btnSaveBill).setOnClickListener(v -> saveCurrentBill(false));
-
         // Add Customer Flow
         findViewById(R.id.btnCreateCustomer).setOnClickListener(v -> {
             editingCustomerId = -1;
-            if (tvAddCustomerTitle != null) tvAddCustomerTitle.setText("Add Customer");
+            if (tvAddCustomerTitle != null) tvAddCustomerTitle.setText("New Customer");
+            Button saveBtn = findViewById(R.id.saveButton);
+            if (saveBtn != null) saveBtn.setText("Create Account");
+
             // Clear fields
             etFirstName.setText("");
             etLastName.setText("");
@@ -400,13 +473,15 @@ public class MainActivity extends AppCompatActivity {
             etAddress.setText("");
             etOldBillAmount.setText("");
             
+            updateCustomerPreview();
+            
             deliveryLayout.setVisibility(View.GONE);
             customersLayout.setVisibility(View.GONE);
             itemsLayout.setVisibility(View.GONE);
             addCustomerLayout.setVisibility(View.VISIBLE);
         });
 
-        findViewById(R.id.backButton).setOnClickListener(v -> navigateToDelivery());
+        // findViewById(R.id.backButton).setOnClickListener(v -> navigateToDelivery());
 
         findViewById(R.id.saveButton).setOnClickListener(v -> {
             String firstName = etFirstName.getText().toString().trim();
@@ -585,6 +660,31 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void updateCustomerPreview() {
+        if (tvPreviewName == null || tvPreviewStore == null || tvPreviewInitials == null) return;
+
+        String first = etFirstName.getText().toString().trim();
+        String last = etLastName.getText().toString().trim();
+        String store = etStoreName.getText().toString().trim();
+
+        if (first.isEmpty() && last.isEmpty()) {
+            tvPreviewName.setText("New Customer");
+            tvPreviewInitials.setText("NC");
+        } else {
+            tvPreviewName.setText(first + " " + last);
+            String initials = "";
+            if (!first.isEmpty()) initials += first.charAt(0);
+            if (!last.isEmpty()) initials += last.charAt(0);
+            tvPreviewInitials.setText(initials.toUpperCase());
+        }
+
+        if (store.isEmpty()) {
+            tvPreviewStore.setText("Store name preview");
+        } else {
+            tvPreviewStore.setText(store);
+        }
+    }
+
     private void setupNavigationClickListeners() {
         navDeliveryBilling.setOnClickListener(v -> {
             selectNavItem(navDeliveryBilling);
@@ -738,25 +838,38 @@ public class MainActivity extends AppCompatActivity {
         android.widget.TextView tvName = row.findViewById(R.id.customerName);
         android.widget.TextView tvStore = row.findViewById(R.id.storeName);
         android.widget.TextView tvPhone = row.findViewById(R.id.phoneNumber);
-        android.widget.TextView tvAmount = row.findViewById(R.id.dueAmount);
-        View arrowIcon = row.findViewById(R.id.arrowIcon);
+        android.widget.TextView tvStatusPill = row.findViewById(R.id.statusPill);
+        View customerCard = row.findViewById(R.id.customerCard);
 
         tvAvatar.setText(avatar);
         tvName.setText(firstName + " " + lastName);
         tvStore.setText(store);
         tvPhone.setText(phone);
-        tvAmount.setText(String.valueOf((int) amount));
-
-        if (isSelected) {
-            row.setBackgroundResource(R.drawable.bg_customer_card);
+        
+        if (amount > 0) {
+            tvStatusPill.setText("Due Rs. " + String.format(Locale.getDefault(), "%,.0f", amount));
+            tvStatusPill.setBackgroundResource(R.drawable.bg_status_pill_due);
+            tvStatusPill.setTextColor(Color.parseColor("#92400E"));
         } else {
-            row.setBackgroundResource(R.drawable.bg_customer_card_white);
+            tvStatusPill.setText("Settled");
+            tvStatusPill.setBackgroundResource(R.drawable.bg_status_pill_settled);
+            tvStatusPill.setTextColor(Color.parseColor("#065F46"));
         }
 
+        if (customerCard != null) {
+            customerCard.setOnClickListener(v -> {
+                selectCustomer(id, firstName + " " + lastName, store, phone, amount);
+                navigateToDelivery();
+            });
+        }
+
+        View arrowIcon = row.findViewById(R.id.arrowIcon);
         if (arrowIcon != null) {
             arrowIcon.setOnClickListener(v -> {
                 editingCustomerId = id;
                 if (tvAddCustomerTitle != null) tvAddCustomerTitle.setText("Edit Customer");
+                Button saveBtn = findViewById(R.id.saveButton);
+                if (saveBtn != null) saveBtn.setText("Update Profile");
                 
                 etFirstName.setText(firstName);
                 etLastName.setText(lastName);
@@ -765,10 +878,36 @@ public class MainActivity extends AppCompatActivity {
                 etAddress.setText(address);
                 etOldBillAmount.setText(String.valueOf((int) amount));
 
-                findViewById(R.id.customersLayout).setVisibility(View.GONE);
-                findViewById(R.id.addCustomerLayout).setVisibility(View.VISIBLE);
+                updateCustomerPreview();
+
+                hideAllLayouts();
+                addCustomerLayout.setVisibility(View.VISIBLE);
             });
         }
+    }
+
+    private void updateCustomerFilterStyles() {
+        if (filterAll == null || filterDue == null || filterSettled == null) return;
+
+        filterAll.setBackgroundResource(customerFilterMode == 0 ? R.drawable.bg_filter_active : R.drawable.bg_filter_inactive);
+        filterAll.setTextColor(customerFilterMode == 0 ? getResources().getColor(R.color.emerald_header_top, getTheme()) : getResources().getColor(R.color.text_secondary, getTheme()));
+        filterAll.setTypeface(null, customerFilterMode == 0 ? Typeface.BOLD : Typeface.NORMAL);
+
+        filterDue.setBackgroundResource(customerFilterMode == 1 ? R.drawable.bg_filter_active : R.drawable.bg_filter_inactive);
+        filterDue.setTextColor(customerFilterMode == 1 ? getResources().getColor(R.color.emerald_header_top, getTheme()) : getResources().getColor(R.color.text_secondary, getTheme()));
+        filterDue.setTypeface(null, customerFilterMode == 1 ? Typeface.BOLD : Typeface.NORMAL);
+
+        filterSettled.setBackgroundResource(customerFilterMode == 2 ? R.drawable.bg_filter_active : R.drawable.bg_filter_inactive);
+        filterSettled.setTextColor(customerFilterMode == 2 ? getResources().getColor(R.color.emerald_header_top, getTheme()) : getResources().getColor(R.color.text_secondary, getTheme()));
+        filterSettled.setTypeface(null, customerFilterMode == 2 ? Typeface.BOLD : Typeface.NORMAL);
+
+        if (tvCustomerListHeader != null) {
+            if (customerFilterMode == 0) tvCustomerListHeader.setText("All customers");
+            else if (customerFilterMode == 1) tvCustomerListHeader.setText("Customers with due");
+            else if (customerFilterMode == 2) tvCustomerListHeader.setText("Settled customers");
+        }
+
+        refreshCustomers();
     }
 
     private void refreshDeliveryItems() {
@@ -791,15 +930,6 @@ public class MainActivity extends AppCompatActivity {
                 View row = LayoutInflater.from(this).inflate(R.layout.item_delivery_row, llDeliveryItemsList, false);
                 setupDeliveryItemRow(row, id, name, cost, onHand);
                 llDeliveryItemsList.addView(row);
-
-                // Add a divider
-                View divider = new View(this);
-                divider.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1));
-                divider.setBackgroundColor(getResources().getColor(R.color.divider_grey, getTheme()));
-                LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) divider.getLayoutParams();
-                params.setMargins(0, 32, 0, 32);
-                llDeliveryItemsList.addView(divider);
-
             } while (cursor.moveToNext());
             cursor.close();
         }
@@ -813,6 +943,7 @@ public class MainActivity extends AppCompatActivity {
         TextView tvTotal = row.findViewById(R.id.itemTotal);
         View btnMinus = row.findViewById(R.id.btnMinus);
         View btnPlus = row.findViewById(R.id.btnPlus);
+        View itemCardRoot = row.findViewById(R.id.itemCardRoot);
 
         tvName.setText(name);
         if (tvPriceDisplay != null) {
@@ -822,34 +953,12 @@ public class MainActivity extends AppCompatActivity {
         tvTotal.setText("0");
 
         btnPlus.setOnClickListener(v -> {
-            int qty = deliveryQuantities.get(id) + 5;
+            int qty = deliveryQuantities.get(id) + 1;
             deliveryQuantities.put(id, qty);
             etQuantity.setText(String.valueOf(qty));
             tvTotal.setText(String.valueOf((int) (qty * price)));
+            updateItemCardStyle(itemCardRoot, qty);
             updateDeliveryTotals();
-        });
-
-        // 3-second long press reset logic
-        final Handler handler = new Handler(Looper.getMainLooper());
-        final Runnable resetRunnable = () -> {
-            deliveryQuantities.put(id, 0);
-            etQuantity.setText("0");
-            tvTotal.setText("0");
-            updateDeliveryTotals();
-            Toast.makeText(MainActivity.this, name + " reset to 0", Toast.LENGTH_SHORT).show();
-        };
-
-        btnMinus.setOnTouchListener((v, event) -> {
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    handler.postDelayed(resetRunnable, 3000);
-                    break;
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    handler.removeCallbacks(resetRunnable);
-                    break;
-            }
-            return false;
         });
 
         btnMinus.setOnClickListener(v -> {
@@ -858,41 +967,65 @@ public class MainActivity extends AppCompatActivity {
                 qty--;
                 deliveryQuantities.put(id, qty);
                 etQuantity.setText(String.valueOf(qty));
-                if (qty == 0) {
-                    tvTotal.setText("0");
-                } else {
-                    tvTotal.setText(String.valueOf((int) (qty * price)));
-                }
+                tvTotal.setText(qty == 0 ? "0" : String.valueOf((int) (qty * price)));
+                updateItemCardStyle(itemCardRoot, qty);
                 updateDeliveryTotals();
             }
         });
 
+        // 3-second long press reset logic
+        final Handler handler = new Handler(Looper.getMainLooper());
+        final Runnable resetRunnable = () -> {
+            deliveryQuantities.put(id, 0);
+            etQuantity.setText("0");
+            tvTotal.setText("0");
+            updateItemCardStyle(itemCardRoot, 0);
+            updateDeliveryTotals();
+            Toast.makeText(MainActivity.this, name + " reset to 0", Toast.LENGTH_SHORT).show();
+        };
+
+        btnMinus.setOnLongClickListener(v -> {
+            handler.postDelayed(resetRunnable, 1000); // Changed to 1s for better UX
+            return true;
+        });
+
         etQuantity.addTextChangedListener(new android.text.TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-
-            @Override
-            public void afterTextChanged(android.text.Editable s) {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(android.text.Editable s) {
                 int qty = 0;
                 if (s != null && s.length() > 0) {
-                    try {
-                        qty = Integer.parseInt(s.toString());
-                    } catch (NumberFormatException e) {
-                        qty = 0;
-                    }
+                    try { qty = Integer.parseInt(s.toString()); } catch (NumberFormatException e) { qty = 0; }
                 }
-                
-                // Only update if value actually changed to avoid infinite loops if setText is called
                 if (deliveryQuantities.get(id) != qty) {
                     deliveryQuantities.put(id, qty);
                     tvTotal.setText(String.valueOf((int) (qty * price)));
+                    updateItemCardStyle(itemCardRoot, qty);
                     updateDeliveryTotals();
                 }
             }
         });
+    }
+
+    private String getItemEmoji(String name) {
+        String n = name.toLowerCase();
+        if (n.contains("bread") || n.contains("paan")) return "🍞";
+        if (n.contains("bun") || n.contains("malu")) return "🥯";
+        if (n.contains("cake")) return "🍰";
+        if (n.contains("cookie") || n.contains("biscuit")) return "🍪";
+        if (n.contains("pastry") || n.contains("patties")) return "🥐";
+        if (n.contains("roll")) return "🌯";
+        if (n.contains("donut")) return "🍩";
+        return "📦";
+    }
+
+    private void updateItemCardStyle(View cardRoot, int qty) {
+        if (cardRoot == null) return;
+        if (qty > 0) {
+            cardRoot.setBackgroundResource(R.drawable.bg_item_card_active);
+        } else {
+            cardRoot.setBackgroundResource(R.drawable.bg_item_card_normal);
+        }
     }
 
     private void updateDeliveryTotals() {
@@ -901,7 +1034,7 @@ public class MainActivity extends AppCompatActivity {
             deliveryTotal += deliveryQuantities.get(id) * itemPrices.get(id);
         }
 
-        tvDeliveryTotal.setText(String.valueOf((int) deliveryTotal));
+        tvDeliveryTotal.setText("Rs. " + (int) deliveryTotal);
 
         // Keep payment details and buttons visible
         int visibility = View.VISIBLE;
@@ -911,18 +1044,17 @@ public class MainActivity extends AppCompatActivity {
 
         double arrears = 0;
         if (selectedCustomerId != -1) {
-            // In a real app, we'd fetch the latest arrears from DB.
-            // For now, we use the value displayed in the selected customer card.
             try {
-                arrears = Double.parseDouble(selectedDueAmount.getText().toString());
+                String arrearsText = selectedDueAmount.getText().toString().replace("Rs. ", "").replace(",", "").trim();
+                arrears = Double.parseDouble(arrearsText);
             } catch (Exception e) {
                 arrears = 0;
             }
         }
-        tvPrevArrears.setText(String.valueOf((int) arrears));
+        tvPrevArrears.setText("Rs. " + (int) arrears);
         
         double totalDue = deliveryTotal + arrears;
-        tvTotalDue.setText(String.valueOf((int) totalDue));
+        tvTotalDue.setText("Rs. " + (int) totalDue);
         
         updateRemainingBalance();
     }
@@ -944,17 +1076,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateRemainingBalance() {
-        double totalDue;
+        double totalDue = 0;
         try {
-            totalDue = Double.parseDouble(tvTotalDue.getText().toString());
+            String dueStr = tvTotalDue.getText().toString().replace("Rs. ", "").replace(",", "").trim();
+            totalDue = Double.parseDouble(dueStr);
         } catch (Exception e) {
             totalDue = 0;
         }
-
-        double arrears = 0;
-        try {
-            arrears = Double.parseDouble(tvPrevArrears.getText().toString());
-        } catch (Exception e) {}
 
         double payment;
         String paymentStr = etPaymentAmount.getText().toString();
@@ -969,7 +1097,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         double remaining = totalDue - payment;
-        tvRemainingBalance.setText(String.valueOf((int) remaining));
+        tvRemainingBalance.setText("Rs. " + (int) remaining);
     }
 
     private void setupDeliverySearch() {
@@ -1026,7 +1154,7 @@ public class MainActivity extends AppCompatActivity {
                 // Add a divider
                 View divider = new View(this);
                 divider.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1));
-                divider.setBackgroundColor(Color.LTGRAY);
+                divider.setBackgroundColor(getResources().getColor(R.color.drawer_divider, getTheme()));
                 llSearchResults.addView(divider);
 
                 count++;
@@ -1049,7 +1177,7 @@ public class MainActivity extends AppCompatActivity {
         selectedAvatar.setText(initials.toUpperCase());
         selectedCustomerName.setText(firstName + " " + lastName);
         selectedStoreName.setText(storeName);
-        selectedDueAmount.setText(String.valueOf((int) oldBill));
+        selectedDueAmount.setText("Rs. " + (int) oldBill);
         
         // Trigger billing update when customer is selected
         updateDeliveryTotals();
@@ -1064,15 +1192,17 @@ public class MainActivity extends AppCompatActivity {
             query = etCustomerListSearch.getText().toString().trim();
         }
 
-        int count = dbHelper.getCustomersCount();
-        tvCustomerCount.setText(getString(R.string.customer_count, count));
-
         Cursor cursor;
         if (query.isEmpty()) {
             cursor = dbHelper.getAllCustomers();
         } else {
             cursor = dbHelper.searchCustomers(query);
         }
+
+        int totalClients = 0;
+        int withDueCount = 0;
+        double totalReceivable = 0;
+        int displayedCount = 0;
 
         if (cursor != null && cursor.moveToFirst()) {
             do {
@@ -1084,16 +1214,44 @@ public class MainActivity extends AppCompatActivity {
                 String address = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ADDRESS));
                 double oldBill = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OLD_BILL));
 
-                String initials = "";
-                if (firstName.length() > 0) initials += firstName.charAt(0);
-                if (lastName.length() > 0) initials += lastName.charAt(0);
+                totalClients++;
+                if (oldBill > 0) {
+                    withDueCount++;
+                    totalReceivable += oldBill;
+                }
 
-                View row = LayoutInflater.from(this).inflate(R.layout.item_customer_row, llCustomerList, false);
-                setupCustomerRow(row, id, initials.toUpperCase(), firstName, lastName, storeName, contact, address, oldBill, false);
-                llCustomerList.addView(row);
+                // Filter logic
+                boolean shouldAdd = true;
+                if (customerFilterMode == 1 && oldBill <= 0) shouldAdd = false;
+                if (customerFilterMode == 2 && oldBill > 0) shouldAdd = false;
+
+                if (shouldAdd) {
+                    displayedCount++;
+                    String initials = "";
+                    if (firstName.length() > 0) initials += firstName.charAt(0);
+                    if (lastName.length() > 0) initials += lastName.charAt(0);
+
+                    View row = LayoutInflater.from(this).inflate(R.layout.item_customer_row, llCustomerList, false);
+                    setupCustomerRow(row, id, initials.toUpperCase(), firstName, lastName, storeName, contact, address, oldBill, false);
+                    llCustomerList.addView(row);
+                }
 
             } while (cursor.moveToNext());
             cursor.close();
+        }
+
+        // Update KPIs
+        if (tvTotalClientsKpi != null) tvTotalClientsKpi.setText(String.valueOf(totalClients));
+        if (tvWithDueKpi != null) tvWithDueKpi.setText(String.valueOf(withDueCount));
+        if (tvTotalReceivableKpi != null) tvTotalReceivableKpi.setText("Rs. " + String.format(Locale.getDefault(), "%,.0f", totalReceivable));
+
+        if (tvCustomerCount != null) {
+            tvCustomerCount.setText(displayedCount + (displayedCount == 1 ? " customer" : " customers"));
+        }
+        
+        if (tvCustomerCount != null) {
+            int currentListCount = llCustomerList.getChildCount();
+            tvCustomerCount.setText(currentListCount + " customers");
         }
     }
 
@@ -1118,9 +1276,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         try {
-            deliveryTotal = Double.parseDouble(tvDeliveryTotal.getText().toString());
-            double arrears = Double.parseDouble(tvPrevArrears.getText().toString());
-            double totalDue = Double.parseDouble(tvTotalDue.getText().toString());
+            String deliveryTotalStr = tvDeliveryTotal.getText().toString().replace("Rs. ", "").replace(",", "").trim();
+            deliveryTotal = Double.parseDouble(deliveryTotalStr);
+
+            String totalDueStr = tvTotalDue.getText().toString().replace("Rs. ", "").replace(",", "").trim();
+            double totalDue = Double.parseDouble(totalDueStr);
+
             String paymentStr = etPaymentAmount.getText().toString().trim();
             
             double paid;
@@ -1136,37 +1297,23 @@ public class MainActivity extends AppCompatActivity {
 
             long orderId = dbHelper.saveOrder(selectedCustomerId, date, deliveryTotal, paid, remaining, deliveryQuantities, itemPrices);
 
-                if (orderId != -1) {
-                    // Update customer's old_bill (arrears) in the database
-                    dbHelper.updateCustomerDue(selectedCustomerId, remaining);
+            if (orderId != -1) {
+                // Update customer's old_bill (arrears) in the database
+                dbHelper.updateCustomerDue(selectedCustomerId, remaining);
 
-                    Toast.makeText(this, "Bill saved successfully!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Bill saved successfully!", Toast.LENGTH_SHORT).show();
 
-                    if (autoPrint) {
-                        printBill((int) orderId);
-                        resetDeliveryScreen();
-                    } else {
-                        // Ask for printing
-                        new androidx.appcompat.app.AlertDialog.Builder(this)
-                            .setTitle("Print Bill")
-                            .setMessage("Do you want to print this bill now?")
-                            .setPositiveButton("Print", (dialog, which) -> {
-                                printBill((int) orderId);
-                                resetDeliveryScreen();
-                            })
-                            .setNegativeButton("No", (dialog, which) -> {
-                                resetDeliveryScreen();
-                            })
-                            .setCancelable(false)
-                            .show();
-                    }
-                } else {
-                    Toast.makeText(this, "Failed to save bill", Toast.LENGTH_SHORT).show();
+                if (autoPrint) {
+                    printBill((int) orderId);
                 }
-            } catch (Exception e) {
-                Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                resetDeliveryScreen();
+            } else {
+                Toast.makeText(this, "Failed to save bill", Toast.LENGTH_SHORT).show();
             }
+        } catch (Exception e) {
+            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
+    }
 
         private void resetDeliveryScreen() {
             selectedCustomerId = -1;
@@ -1480,33 +1627,41 @@ public class MainActivity extends AppCompatActivity {
         TextView tvPrice = row.findViewById(R.id.itemPriceDisplay);
         TextView tvTotal = row.findViewById(R.id.itemTotal);
         EditText etQty = row.findViewById(R.id.quantity);
-        TextView btnMinus = row.findViewById(R.id.btnMinus);
-        TextView btnPlus = row.findViewById(R.id.btnPlus);
+        View btnMinus = row.findViewById(R.id.btnMinus);
+        View btnPlus = row.findViewById(R.id.btnPlus);
+        View itemCardRoot = row.findViewById(R.id.itemCardRoot);
 
         tvName.setText(name);
+
         if (tvPrice != null) {
             tvPrice.setText("Price: " + (int) price + "/" + stock);
         }
         etQty.setText(String.valueOf(initialQty));
         tvTotal.setText(String.valueOf((int) (initialQty * price)));
 
+        updateItemCardStyle(itemCardRoot, initialQty);
+
         btnMinus.setOnClickListener(v -> {
-            int qty = Integer.parseInt(etQty.getText().toString());
+            int qty = 0;
+            try { qty = Integer.parseInt(etQty.getText().toString()); } catch (Exception e) {}
             if (qty > 0) {
                 qty--;
                 etQty.setText(String.valueOf(qty));
                 tvTotal.setText(String.valueOf((int) (qty * price)));
                 editOrderQuantities.put(itemId, qty);
+                updateItemCardStyle(itemCardRoot, qty);
                 updateEditBillSummary();
             }
         });
 
         btnPlus.setOnClickListener(v -> {
-            int qty = Integer.parseInt(etQty.getText().toString());
+            int qty = 0;
+            try { qty = Integer.parseInt(etQty.getText().toString()); } catch (Exception e) {}
             qty++;
             etQty.setText(String.valueOf(qty));
             tvTotal.setText(String.valueOf((int) (qty * price)));
             editOrderQuantities.put(itemId, qty);
+            updateItemCardStyle(itemCardRoot, qty);
             updateEditBillSummary();
         });
 
@@ -1521,6 +1676,7 @@ public class MainActivity extends AppCompatActivity {
                 int qty = val.isEmpty() ? 0 : Integer.parseInt(val);
                 tvTotal.setText(String.valueOf((int) (qty * price)));
                 editOrderQuantities.put(itemId, qty);
+                updateItemCardStyle(itemCardRoot, qty);
                 updateEditBillSummary();
             }
         });

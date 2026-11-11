@@ -2,17 +2,20 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/itemCardRoot"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingVertical="4dp"
-    android:paddingHorizontal="8dp">
+    android:layout_marginBottom="10dp"
+    android:background="@drawable/bg_item_card_normal"
+    android:padding="12dp">
 
     <LinearLayout
         android:id="@+id/itemInfo"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="8dp"
         android:orientation="vertical"
-        android:layout_marginEnd="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/quantityContainer"
         app:layout_constraintStart_toStartOf="parent"
@@ -22,73 +25,74 @@
             android:id="@+id/itemName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Bread"
-            android:textColor="@color/black"
-            android:textSize="20sp"
-            android:textStyle="bold"
             android:ellipsize="end"
-            android:maxLines="1" />
+            android:maxLines="1"
+            android:text="Bun"
+            android:textColor="@color/text_primary"
+            android:textSize="17sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/itemPriceDisplay"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Price: 0/0"
-            android:textColor="#757575"
-            android:textSize="14sp" />
+            android:layout_marginTop="2dp"
+            android:text="Price: 50/30"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
     </LinearLayout>
 
     <LinearLayout
         android:id="@+id/quantityContainer"
-        android:layout_width="wrap_content"
-        android:layout_height="48dp"
-        android:background="@drawable/bg_quantity_selector"
-        android:gravity="center"
+        android:layout_width="100dp"
+        android:layout_height="38dp"
+        android:layout_marginEnd="14dp"
+        android:background="@drawable/bg_quantity_pill"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
-        android:layout_marginEnd="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/itemTotal"
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/btnMinus"
-            android:layout_width="36dp"
+            android:layout_width="32dp"
             android:layout_height="match_parent"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
             android:text="—"
-            android:textColor="@color/primary_green"
-            android:textSize="22sp"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <EditText
             android:id="@+id/quantity"
-            android:layout_width="48dp"
+            android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:background="@null"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
             android:gravity="center"
-            android:imeOptions="actionDone"
+            android:hint="0"
             android:inputType="number"
-            android:selectAllOnFocus="true"
-            android:importantForAutofill="no"
-            android:text="0"
-            android:textColor="@color/black"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            tools:ignore="LabelFor" />
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/btnPlus"
-            android:layout_width="36dp"
-            android:layout_height="match_parent"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="3dp"
+            android:background="@drawable/bg_avatar_circle"
+            android:backgroundTint="@color/emerald_primary"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
             android:text="+"
-            android:textColor="@color/primary_green"
-            android:textSize="22sp"
+            android:textColor="@color/white"
+            android:textSize="16sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -96,15 +100,14 @@
         android:id="@+id/itemTotal"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:minWidth="40dp"
         android:gravity="end"
+        android:minWidth="40dp"
         android:text="0"
-        android:textColor="@color/black"
-        android:textSize="20sp"
+        android:textColor="@color/text_primary"
+        android:textSize="17sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:text="120" />
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
