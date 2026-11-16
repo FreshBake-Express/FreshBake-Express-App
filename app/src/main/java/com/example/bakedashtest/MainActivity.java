@@ -267,6 +267,16 @@ public class MainActivity extends AppCompatActivity {
             double total = orderCursor.getDouble(orderCursor.getColumnIndexOrThrow("total_amount"));
             double paid = orderCursor.getDouble(orderCursor.getColumnIndexOrThrow("paid_amount"));
             double due = orderCursor.getDouble(orderCursor.getColumnIndexOrThrow("due_amount"));
+            double gross = total;
+            double returnAmount = 0.0;
+            int colGross = orderCursor.getColumnIndex("gross_amount");
+            if (colGross >= 0 && !orderCursor.isNull(colGross)) {
+                gross = orderCursor.getDouble(colGross);
+            }
+            int colReturn = orderCursor.getColumnIndex("return_amount");
+            if (colReturn >= 0 && !orderCursor.isNull(colReturn)) {
+                returnAmount = orderCursor.getDouble(colReturn);
+            }
             orderCursor.close();
 
             Cursor customerCursor = dbHelper.getReadableDatabase().query("customers", null, "id=?", new String[]{String.valueOf(customerId)}, null, null, null);
@@ -320,9 +330,36 @@ public class MainActivity extends AppCompatActivity {
 
             html.append("</tbody></table>");
 
-            html.append("<div class='totals'>")
-                .append("<p><strong>Sub Total: </strong>Rs. ").append((int)total).append("</p>")
-                .append("<p><strong>Paid Amount: </strong>Rs. ").append((int)paid).append("</p>");
+            // Return items (stale / damaged bread)
+            Cursor returnsCursor = dbHelper.getOrderReturns(orderId);
+            if (returnsCursor != null && returnsCursor.getCount() > 0) {
+                html.append("<h3 style='margin-top:20px;color:#be123c;'>Returns</h3>")
+                    .append("<table><thead><tr><th>Item</th><th>Qty</th><th>Reason</th><th>Deduction</th></tr></thead><tbody>");
+                while (returnsCursor.moveToNext()) {
+                    String rName = returnsCursor.getString(returnsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
+                    int rQty = returnsCursor.getInt(returnsCursor.getColumnIndexOrThrow("quantity"));
+                    double rPrice = returnsCursor.getDouble(returnsCursor.getColumnIndexOrThrow("price_at_time"));
+                    String rReason = returnsCursor.getString(returnsCursor.getColumnIndexOrThrow("reason"));
+                    html.append("<tr>")
+                        .append("<td>").append(rName).append("</td>")
+                        .append("<td>").append(rQty).append("</td>")
+                        .append("<td>").append(rReason).append("</td>")
+                        .append("<td>-Rs. ").append((int)(rQty * rPrice)).append("</td>")
+                        .append("</tr>");
+                }
+                html.append("</tbody></table>");
+                returnsCursor.close();
+            }
+
+            html.append("<div class='totals'>");
+            if (returnAmount > 0) {
+                html.append("<p><strong>Gross Delivery: </strong>Rs. ").append((int)gross).append("</p>")
+                    .append("<p style='color:#be123c;'><strong>Less Returns: </strong>-Rs. ").append((int)returnAmount).append("</p>")
+                    .append("<p><strong>Net Sub Total: </strong>Rs. ").append((int)total).append("</p>");
+            } else {
+                html.append("<p><strong>Sub Total: </strong>Rs. ").append((int)total).append("</p>");
+            }
+            html.append("<p><strong>Paid Amount: </strong>Rs. ").append((int)paid).append("</p>");
             if (due < 0) {
                 html.append("<p><strong>Advance Credit: </strong>Rs. ").append(Math.abs((int)due)).append("</p>");
             } else {

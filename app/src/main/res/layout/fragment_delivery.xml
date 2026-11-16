@@ -247,6 +247,7 @@
                     android:layout_height="wrap_content">
 
                     <TextView
+                        android:id="@+id/tvDeliveryTotalLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Delivery total"
@@ -262,6 +263,34 @@
                         android:text="Rs. 0"
                         android:textColor="@color/white"
                         android:textSize="22sp"
+                        android:textStyle="bold" />
+                </RelativeLayout>
+
+                <!-- Gross & Returns breakdown strip (visible when returns > 0) -->
+                <RelativeLayout
+                    android:id="@+id/rlGrossAndReturnsBreakdown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/tvGrossTotal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Gross: Rs. 0"
+                        android:textColor="@color/drawer_item_unselected"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvReturnsTotal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:text="Less Returns: -Rs. 0"
+                        android:textColor="#FDA4AF"
+                        android:textSize="12sp"
                         android:textStyle="bold" />
                 </RelativeLayout>
 

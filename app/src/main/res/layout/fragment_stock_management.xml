@@ -108,6 +108,29 @@
                         android:orientation="vertical">
 
                         <TextView
+                            android:id="@+id/tvStatTotalReturns"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="#FDA4AF"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Returns"
+                            android:textColor="@color/drawer_icon_inactive"
+                            android:textSize="10.5sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
                             android:id="@+id/tvStatLowAlerts"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"

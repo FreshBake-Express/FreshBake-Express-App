@@ -288,6 +288,8 @@ public class HistoryFragment extends Fragment {
 
         if (cursor != null && cursor.moveToFirst()) {
             revenue = cursor.getDouble(cursor.getColumnIndexOrThrow("total_revenue"));
+            double gross = cursor.getColumnIndex("total_gross") >= 0 ? cursor.getDouble(cursor.getColumnIndexOrThrow("total_gross")) : revenue;
+            double returns = cursor.getColumnIndex("total_returns") >= 0 ? cursor.getDouble(cursor.getColumnIndexOrThrow("total_returns")) : 0;
             bills = cursor.getInt(cursor.getColumnIndexOrThrow("total_bills"));
             due = cursor.getDouble(cursor.getColumnIndexOrThrow("total_due"));
             collected = cursor.getDouble(cursor.getColumnIndexOrThrow("total_collected"));
@@ -297,7 +299,11 @@ public class HistoryFragment extends Fragment {
                 tvStatRevenue.setText("Rs. " + String.format(Locale.getDefault(), "%,d", (long) revenue));
             }
             if (tvStatBills != null) {
-                tvStatBills.setText(bills + (bills == 1 ? " Bill" : " Bills"));
+                if (returns > 0) {
+                    tvStatBills.setText(bills + (bills == 1 ? " Bill" : " Bills") + " • Ret: -Rs. " + String.format(Locale.getDefault(), "%,d", (long) returns));
+                } else {
+                    tvStatBills.setText(bills + (bills == 1 ? " Bill" : " Bills"));
+                }
             }
             if (tvStatDue != null) {
                 tvStatDue.setText("Rs. " + String.format(Locale.getDefault(), "%,d", (long) due));
@@ -587,9 +593,11 @@ public class HistoryFragment extends Fragment {
                 int qty = cursor.getInt(cursor.getColumnIndexOrThrow("total_qty"));
                 double total = cursor.getDouble(cursor.getColumnIndexOrThrow("total_price"));
 
-                totalUnitsSold += qty;
-                totalItemRevenue += total;
-                itemsList.add(new TempItemSale(name, price, qty, total));
+                if (qty > 0 && total > 0) {
+                    totalUnitsSold += qty;
+                    totalItemRevenue += total;
+                    itemsList.add(new TempItemSale(name, price, qty, total));
+                }
             } while (cursor.moveToNext());
             cursor.close();
         }
@@ -606,10 +614,12 @@ public class HistoryFragment extends Fragment {
             do {
                 String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
                 double price = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COST));
-                int qty = cursor.getInt(cursor.getColumnIndexOrThrow("total_qty"));
-                double total = cursor.getDouble(cursor.getColumnIndexOrThrow("total_price"));
+                int delQty = cursor.getColumnIndex("delivered_qty") >= 0 ? cursor.getInt(cursor.getColumnIndexOrThrow("delivered_qty")) : 0;
+                int retQty = cursor.getColumnIndex("returned_qty") >= 0 ? cursor.getInt(cursor.getColumnIndexOrThrow("returned_qty")) : 0;
+                int netQty = cursor.getInt(cursor.getColumnIndexOrThrow("total_qty"));
+                double netTotal = cursor.getDouble(cursor.getColumnIndexOrThrow("total_price"));
 
-                totalUnitsSold += qty;
+                totalUnitsSold += netQty;
 
                 View row = LayoutInflater.from(requireContext()).inflate(R.layout.item_history_item, llHistoryList, false);
                 TextView tvName = row.findViewById(R.id.tvItemName);
@@ -618,10 +628,14 @@ public class HistoryFragment extends Fragment {
 
                 if (tvName != null) tvName.setText(name);
                 if (tvDetails != null) {
-                    tvDetails.setText("Rs. " + (int) price + " / unit • " + qty + " units sold");
+                    if (retQty > 0) {
+                        tvDetails.setText("Rs. " + (int) price + " / unit • " + netQty + " net sold (" + delQty + " del, " + retQty + " ret)");
+                    } else {
+                        tvDetails.setText("Rs. " + (int) price + " / unit • " + netQty + " units sold");
+                    }
                 }
                 if (tvTotal != null) {
-                    tvTotal.setText("Rs. " + String.format(Locale.getDefault(), "%,d", (long) total));
+                    tvTotal.setText("Rs. " + String.format(Locale.getDefault(), "%,d", (long) netTotal));
                 }
 
                 llHistoryList.addView(row);
@@ -631,7 +645,7 @@ public class HistoryFragment extends Fragment {
         }
 
         if (tvListCount != null) {
-            tvListCount.setText(count + " products (" + totalUnitsSold + " units)");
+            tvListCount.setText(count + " products (" + totalUnitsSold + " net units)");
         }
 
         if (llHistoryEmpty != null) {
@@ -764,6 +778,7 @@ public class HistoryFragment extends Fragment {
                 final String orderDate = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_DATE));
                 final double orderTotal = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_TOTAL));
                 final double orderDue = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_DUE));
+                final double orderReturn = cursor.getColumnIndex(DatabaseHelper.COLUMN_ORDER_RETURN) >= 0 ? cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_RETURN)) : 0.0;
 
                 View row = LayoutInflater.from(requireContext()).inflate(R.layout.item_history_customer, llHistoryList, false);
 
@@ -780,7 +795,13 @@ public class HistoryFragment extends Fragment {
 
                 if (tvAvatar != null) tvAvatar.setText(initials.toUpperCase(Locale.getDefault()));
                 if (tvName != null) tvName.setText(firstName + " " + lastName);
-                if (tvStore != null) tvStore.setText(storeName);
+                if (tvStore != null) {
+                    if (orderReturn > 0) {
+                        tvStore.setText(storeName + " • ↩ Ret: -Rs. " + (int) orderReturn);
+                    } else {
+                        tvStore.setText(storeName);
+                    }
+                }
                 if (tvPhone != null) {
                     tvPhone.setText(orderDate != null ? orderDate : contact);
                 }

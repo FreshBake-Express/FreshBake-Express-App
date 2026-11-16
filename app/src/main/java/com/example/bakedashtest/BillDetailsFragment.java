@@ -1,6 +1,7 @@
 package com.example.bakedashtest;
 
 import android.database.Cursor;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -193,6 +194,43 @@ public class BillDetailsFragment extends Fragment {
                 llBillItemsList.addView(row);
             } while (itemsCursor.moveToNext());
             itemsCursor.close();
+        }
+
+        Cursor returnsCursor = dbHelper.getOrderReturns(orderId);
+        if (returnsCursor != null && returnsCursor.moveToFirst()) {
+            do {
+                String rName = returnsCursor.getString(returnsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME));
+                int rQty = returnsCursor.getInt(returnsCursor.getColumnIndexOrThrow("quantity"));
+                double rPrice = returnsCursor.getDouble(returnsCursor.getColumnIndexOrThrow("price_at_time"));
+                String rReason = returnsCursor.getString(returnsCursor.getColumnIndexOrThrow("reason"));
+
+                View row = LayoutInflater.from(requireContext()).inflate(R.layout.item_bill_detail_row, llBillItemsList, false);
+                TextView tvItemName = row.findViewById(R.id.tvItemName);
+                if (tvItemName != null) {
+                    tvItemName.setText("↩ " + rName + " (" + rReason + ")");
+                    tvItemName.setTextColor(Color.parseColor("#BE123C"));
+                }
+
+                TextView tvPrice = row.findViewById(R.id.tvItemPrice);
+                if (tvPrice != null) {
+                    tvPrice.setText("-Rs. " + (int)(rQty * rPrice));
+                    tvPrice.setTextColor(Color.parseColor("#BE123C"));
+                }
+
+                TextView tvQty = row.findViewById(R.id.tvItemQty);
+                if (tvQty != null) {
+                    tvQty.setText("-" + rQty);
+                    tvQty.setTextColor(Color.parseColor("#BE123C"));
+                }
+
+                View btnMinus = row.findViewById(R.id.btnMinus);
+                View btnPlus = row.findViewById(R.id.btnPlus);
+                if (btnMinus != null) btnMinus.setVisibility(View.GONE);
+                if (btnPlus != null) btnPlus.setVisibility(View.GONE);
+
+                llBillItemsList.addView(row);
+            } while (returnsCursor.moveToNext());
+            returnsCursor.close();
         }
     }
 

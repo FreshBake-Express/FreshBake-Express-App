@@ -28,7 +28,7 @@ import java.util.Locale;
 public class StockFragment extends Fragment {
 
     private DatabaseHelper dbHelper;
-    private TextView tvStatTotalUnits, tvStatLowAlerts, tvStatStockValue;
+    private TextView tvStatTotalUnits, tvStatTotalReturns, tvStatLowAlerts, tvStatStockValue;
     private TextView tvStockItemsCount;
     private EditText etStockSearch;
     private LinearLayout llStockList, llEmptyState;
@@ -45,6 +45,7 @@ public class StockFragment extends Fragment {
         dbHelper = new DatabaseHelper(requireContext());
 
         tvStatTotalUnits = view.findViewById(R.id.tvStatTotalUnits);
+        tvStatTotalReturns = view.findViewById(R.id.tvStatTotalReturns);
         tvStatLowAlerts = view.findViewById(R.id.tvStatLowAlerts);
         tvStatStockValue = view.findViewById(R.id.tvStatStockValue);
         tvStockItemsCount = view.findViewById(R.id.tvStockItemsCount);
@@ -126,6 +127,7 @@ public class StockFragment extends Fragment {
 
         Cursor cursor = dbHelper.getAllItems();
         int totalLoaded = 0;
+        int totalReturns = 0;
         int lowAlerts = 0;
         double totalStockValue = 0;
         int visibleCount = 0;
@@ -146,7 +148,11 @@ public class StockFragment extends Fragment {
                 final int reorder = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_REORDER_LEVEL));
                 final int isActive = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_IS_ACTIVE));
 
+                int colRet = cursor.getColumnIndex(DatabaseHelper.COLUMN_RETURN_STOCK);
+                final int returnStock = (colRet >= 0 && !cursor.isNull(colRet)) ? cursor.getInt(colRet) : 0;
+
                 totalLoaded += onHand;
+                totalReturns += returnStock;
                 totalStockValue += (onHand * cost);
 
                 boolean isOut = (onHand <= 0);
@@ -170,7 +176,7 @@ public class StockFragment extends Fragment {
 
                 if (matchesQuery && matchesFilter) {
                     visibleCount++;
-                    addStockRow(id, name, sku, category, cost, onHand, reserved, reorder, isActive);
+                    addStockRow(id, name, sku, category, cost, onHand, reserved, reorder, returnStock, isActive);
                 }
             } while (cursor.moveToNext());
             cursor.close();
@@ -179,6 +185,9 @@ public class StockFragment extends Fragment {
         // Update KPI Strip
         if (tvStatTotalUnits != null) {
             tvStatTotalUnits.setText(String.valueOf(totalLoaded));
+        }
+        if (tvStatTotalReturns != null) {
+            tvStatTotalReturns.setText(String.valueOf(totalReturns));
         }
         if (tvStatLowAlerts != null) {
             tvStatLowAlerts.setText(String.valueOf(lowAlerts));
@@ -195,13 +204,15 @@ public class StockFragment extends Fragment {
     }
 
     private void addStockRow(final int id, final String name, final String sku, final String category,
-                             final double cost, final int onHand, final int reserved, final int reorder, final int isActive) {
+                             final double cost, final int onHand, final int reserved, final int reorder,
+                             final int returnStock, final int isActive) {
         View row = LayoutInflater.from(requireContext()).inflate(R.layout.item_stock_row, llStockList, false);
 
         TextView tvTag = row.findViewById(R.id.tvStockTag);
         TextView tvName = row.findViewById(R.id.tvStockItemName);
         TextView tvMeta = row.findViewById(R.id.tvStockMeta);
         TextView tvStatus = row.findViewById(R.id.tvStockStatus);
+        TextView tvStockReturnBadge = row.findViewById(R.id.tvStockReturnBadge);
         TextView tvLevelText = row.findViewById(R.id.tvStockLevelText);
         TextView tvItemValue = row.findViewById(R.id.tvStockItemValue);
         ProgressBar progressBar = row.findViewById(R.id.progressStockLevel);
@@ -221,6 +232,16 @@ public class StockFragment extends Fragment {
         if (tvMeta != null) {
             String priceStr = (cost % 1 == 0) ? String.valueOf((int) cost) : String.format(Locale.getDefault(), "%.2f", cost);
             tvMeta.setText("Price: Rs. " + priceStr + " • Reorder at " + reorder + " units");
+        }
+
+        // Return badge
+        if (tvStockReturnBadge != null) {
+            if (returnStock > 0) {
+                tvStockReturnBadge.setVisibility(View.VISIBLE);
+                tvStockReturnBadge.setText("↩ " + returnStock + " ret");
+            } else {
+                tvStockReturnBadge.setVisibility(View.GONE);
+            }
         }
 
         // Status badge
@@ -248,7 +269,11 @@ public class StockFragment extends Fragment {
         }
         if (tvLevelText != null) {
             int available = Math.max(0, onHand - reserved);
-            tvLevelText.setText(onHand + " on hand (" + available + " avail)");
+            if (returnStock > 0) {
+                tvLevelText.setText(onHand + " on hand (" + available + " avail) • " + returnStock + " ret");
+            } else {
+                tvLevelText.setText(onHand + " on hand (" + available + " avail)");
+            }
         }
         if (tvItemValue != null) {
             long val = (long) (onHand * cost);
