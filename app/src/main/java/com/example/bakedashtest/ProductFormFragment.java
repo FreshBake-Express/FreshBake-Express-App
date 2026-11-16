@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -22,10 +23,16 @@ public class ProductFormFragment extends Fragment {
     private int productId = -1;
 
     private DatabaseHelper dbHelper;
-    private TextInputEditText etProductName, etProductPrice, etProductSKU, etProductCategory, etReorderLevel;
+    private TextInputEditText etProductName, etProductPrice;
     private SwitchMaterial switchActive;
+    private TextView tvActiveDescription;
     private MaterialButton btnSave, btnDelete;
     private MaterialToolbar toolbar;
+
+    // Preserve existing category & SKU if editing, or empty strings if adding
+    private String existingSku = "";
+    private String existingCategory = "";
+    private int existingReorderLevel = 15;
 
     public static ProductFormFragment newInstance(int productId) {
         ProductFormFragment fragment = new ProductFormFragment();
@@ -53,21 +60,29 @@ public class ProductFormFragment extends Fragment {
         toolbar = view.findViewById(R.id.toolbarProductForm);
         etProductName = view.findViewById(R.id.etProductName);
         etProductPrice = view.findViewById(R.id.etProductPrice);
-        etProductSKU = view.findViewById(R.id.etProductSKU);
-        etProductCategory = view.findViewById(R.id.etProductCategory);
-        etReorderLevel = view.findViewById(R.id.etReorderLevel);
         switchActive = view.findViewById(R.id.switchActive);
+        tvActiveDescription = view.findViewById(R.id.tvActiveDescription);
         btnSave = view.findViewById(R.id.btnSaveProduct);
         btnDelete = view.findViewById(R.id.btnDeleteProduct);
 
         toolbar.setNavigationOnClickListener(v -> requireActivity().getSupportFragmentManager().popBackStack());
 
+        switchActive.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                tvActiveDescription.setText("Show this product in daily delivery loading, catalog, and customer billing.");
+            } else {
+                tvActiveDescription.setText("Hidden from delivery loading and billing until re-activated.");
+            }
+        });
+
         if (productId != -1) {
             loadProductData();
             btnDelete.setVisibility(View.VISIBLE);
             toolbar.setTitle("Edit Product");
+            toolbar.setSubtitle("Update details & pricing");
         } else {
-            toolbar.setTitle("New Product");
+            toolbar.setTitle("Add Product");
+            toolbar.setSubtitle("Product details & pricing");
         }
 
         btnSave.setOnClickListener(v -> saveProduct());
@@ -87,40 +102,57 @@ public class ProductFormFragment extends Fragment {
 
         if (cursor != null && cursor.moveToFirst()) {
             etProductName.setText(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_NAME)));
-            etProductPrice.setText(String.valueOf((int)cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COST))));
-            etProductSKU.setText(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_SKU)));
-            etProductCategory.setText(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_CATEGORY)));
-            etReorderLevel.setText(String.valueOf(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_REORDER_LEVEL))));
-            switchActive.setChecked(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_IS_ACTIVE)) == 1);
+            double cost = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COST));
+            etProductPrice.setText(cost % 1 == 0 ? String.valueOf((int)cost) : String.valueOf(cost));
+
+            // Retain background data
+            existingSku = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_SKU));
+            existingCategory = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_CATEGORY));
+            existingReorderLevel = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_REORDER_LEVEL));
+
+            boolean isActive = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_IS_ACTIVE)) == 1;
+            switchActive.setChecked(isActive);
             cursor.close();
         }
     }
 
     private void saveProduct() {
-        String name = etProductName.getText().toString().trim();
-        String priceStr = etProductPrice.getText().toString().trim();
-        String sku = etProductSKU.getText().toString().trim();
-        String category = etProductCategory.getText().toString().trim();
-        String reorderStr = etReorderLevel.getText().toString().trim();
+        String name = etProductName.getText() != null ? etProductName.getText().toString().trim() : "";
+        String priceStr = etProductPrice.getText() != null ? etProductPrice.getText().toString().trim() : "";
         int isActive = switchActive.isChecked() ? 1 : 0;
 
-        if (name.isEmpty() || priceStr.isEmpty()) {
-            Toast.makeText(requireContext(), "Please fill name and price", Toast.LENGTH_SHORT).show();
+        if (name.isEmpty()) {
+            etProductName.setError("Product name is required");
+            etProductName.requestFocus();
             return;
         }
 
-        double price = Double.parseDouble(priceStr);
-        int reorderLevel = reorderStr.isEmpty() ? 15 : Integer.parseInt(reorderStr);
+        if (priceStr.isEmpty()) {
+            etProductPrice.setError("Price is required");
+            etProductPrice.requestFocus();
+            return;
+        }
+
+        double price;
+        try {
+            price = Double.parseDouble(priceStr);
+        } catch (NumberFormatException e) {
+            etProductPrice.setError("Enter a valid price");
+            etProductPrice.requestFocus();
+            return;
+        }
 
         long result;
         if (productId == -1) {
-            result = dbHelper.addItem(name, price, sku, category, reorderLevel, isActive);
+            // New product: default reorder level 15, empty sku/category
+            result = dbHelper.addItem(name, price, "", "", 15, isActive);
         } else {
-            result = dbHelper.updateItem(productId, name, price, sku, category, reorderLevel, isActive);
+            // Update existing
+            result = dbHelper.updateItem(productId, name, price, existingSku != null ? existingSku : "", existingCategory != null ? existingCategory : "", existingReorderLevel, isActive);
         }
 
         if (result != -1) {
-            Toast.makeText(requireContext(), "Product saved", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), productId == -1 ? "Product created successfully" : "Product updated successfully", Toast.LENGTH_SHORT).show();
             requireActivity().getSupportFragmentManager().popBackStack();
         } else {
             Toast.makeText(requireContext(), "Error saving product", Toast.LENGTH_SHORT).show();
@@ -129,7 +161,7 @@ public class ProductFormFragment extends Fragment {
 
     private void deleteProduct() {
         if (dbHelper.toggleItemStatus(productId, 0)) {
-            Toast.makeText(requireContext(), "Product deactivated", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Product marked inactive", Toast.LENGTH_SHORT).show();
             requireActivity().getSupportFragmentManager().popBackStack();
         }
     }

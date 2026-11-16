@@ -14,107 +14,41 @@
             android:id="@+id/toolbarProductForm"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@android:drawable/ic_menu_revert"
+            app:navigationIcon="@drawable/ic_back"
             app:navigationIconTint="@color/white"
-            app:title="Product Details"
-            app:titleTextColor="@color/white" />
+            app:title="Add Product"
+            app:titleTextColor="@color/white"
+            app:subtitle="Product details &amp; pricing"
+            app:subtitleTextColor="@color/emerald_soft_text" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:fillViewport="true"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:paddingHorizontal="20dp"
+            android:paddingTop="20dp"
+            android:paddingBottom="40dp">
 
-            <!-- Card for basic info -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="Fields marked * are required."
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+
+            <!-- Product Details Card -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Product Name"
-                        app:boxStrokeColor="@color/emerald_primary"
-                        app:hintTextColor="@color/emerald_primary">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etProductName"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textCapWords" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:hint="Selling Price (Rs.)"
-                        app:boxStrokeColor="@color/emerald_primary"
-                        app:hintTextColor="@color/emerald_primary"
-                        app:prefixText="Rs. ">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etProductPrice"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="numberDecimal" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:hint="SKU Code"
-                        app:boxStrokeColor="@color/emerald_primary"
-                        app:hintTextColor="@color/emerald_primary">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etProductSKU"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textCapCharacters" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:hint="Category"
-                        app:boxStrokeColor="@color/emerald_primary"
-                        app:hintTextColor="@color/emerald_primary">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etProductCategory"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textCapWords" />
-                    </com.google.android.material.textfield.TextInputLayout>
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- Inventory settings card -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/card_bg"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="2dp">
 
@@ -127,56 +61,148 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Inventory Settings"
-                        android:textColor="@color/emerald_header_top"
+                        android:text="PRODUCT PRICING &amp; INFO"
+                        android:textColor="@color/emerald_header_mid"
+                        android:textSize="12sp"
                         android:textStyle="bold" />
 
+                    <!-- Product Name -->
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:hint="Reorder Level"
+                        android:hint="Product Name *"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
                         app:boxStrokeColor="@color/emerald_primary"
                         app:hintTextColor="@color/emerald_primary">
 
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etReorderLevel"
+                            android:id="@+id/etProductName"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="number" />
+                            android:inputType="textCapWords"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/switchActive"
+                    <!-- Selling Price -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:checked="true"
-                        android:text="Product Active"
-                        android:textColor="@color/text_primary"
-                        app:thumbTint="@color/emerald_primary"
-                        app:trackTint="@color/emerald_soft_text" />
+                        android:hint="Selling Price (Rs.) *"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:boxStrokeColor="@color/emerald_primary"
+                        app:hintTextColor="@color/emerald_primary"
+                        app:prefixText="Rs. "
+                        app:prefixTextColor="@color/emerald_pressed">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etProductPrice"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
+            <!-- Active / Inactive Route Mode Card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/card_bg"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Active for Delivery Routes"
+                                android:textColor="@color/text_primary"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvActiveDescription"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="Show this product in daily delivery loading, catalog, and customer billing."
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12.5sp" />
+                        </LinearLayout>
+
+                        <com.google.android.material.switchmaterial.SwitchMaterial
+                            android:id="@+id/switchActive"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true"
+                            app:thumbTint="@color/emerald_primary"
+                            app:trackTint="@color/emerald_soft_text" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Save Action Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSaveProduct"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
+                android:layout_height="54dp"
                 android:layout_marginTop="32dp"
                 android:text="Save Product"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
                 app:backgroundTint="@color/emerald_primary"
-                app:cornerRadius="12dp" />
+                app:cornerRadius="14dp"
+                app:elevation="2dp"
+                app:icon="@drawable/ic_check"
+                app:iconGravity="textStart"
+                app:iconTint="@color/white" />
 
+            <!-- Deactivate / Delete Action Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnDeleteProduct"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
                 android:layout_marginTop="8dp"
-                android:text="Delete Product"
+                android:text="Deactivate Product"
+                android:textAllCaps="false"
                 android:textColor="@color/due_text"
+                android:textSize="14sp"
                 android:visibility="gone" />
 
         </LinearLayout>
