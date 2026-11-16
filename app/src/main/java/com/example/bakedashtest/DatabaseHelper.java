@@ -16,7 +16,7 @@ import java.util.Map;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "BakeryDB";
-    private static final int DATABASE_VERSION = 6;
+    private static final int DATABASE_VERSION = 7;
 
     public static final String TABLE_CUSTOMERS = "customers";
     public static final String COLUMN_ID = "id";
@@ -35,6 +35,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_REORDER_LEVEL = "reorder_level";
     public static final String COLUMN_SKU = "sku";
     public static final String COLUMN_CATEGORY = "category";
+    public static final String COLUMN_IS_ACTIVE = "is_active";
 
     public static final String TABLE_ORDERS = "orders";
     public static final String COLUMN_ORDER_CUSTOMER_ID = "customer_id";
@@ -72,7 +73,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             + COLUMN_RESERVED + " INTEGER DEFAULT 0,"
             + COLUMN_REORDER_LEVEL + " INTEGER DEFAULT 15,"
             + COLUMN_SKU + " TEXT,"
-            + COLUMN_CATEGORY + " TEXT"
+            + COLUMN_CATEGORY + " TEXT,"
+            + COLUMN_IS_ACTIVE + " INTEGER DEFAULT 1"
             + ")";
 
     private static final String CREATE_TABLE_ORDERS = "CREATE TABLE " + TABLE_ORDERS + "("
@@ -146,7 +148,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             db.execSQL("ALTER TABLE " + TABLE_ITEMS + " ADD COLUMN " + COLUMN_REORDER_LEVEL + " INTEGER DEFAULT 15");
             db.execSQL("ALTER TABLE " + TABLE_ITEMS + " ADD COLUMN " + COLUMN_SKU + " TEXT");
             db.execSQL("ALTER TABLE " + TABLE_ITEMS + " ADD COLUMN " + COLUMN_CATEGORY + " TEXT");
-            
+
             // Create GRN log table if it doesn't exist
             db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_GRN_LOG + "("
                     + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -154,6 +156,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     + COLUMN_GRN_ITEM_ID + " INTEGER,"
                     + COLUMN_GRN_QUANTITY + " INTEGER"
                     + ")");
+        }
+
+        if (oldVersion < 7) {
+            db.execSQL("ALTER TABLE " + TABLE_ITEMS + " ADD COLUMN " + COLUMN_IS_ACTIVE + " INTEGER DEFAULT 1");
         }
     }
 
@@ -207,7 +213,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return result;
     }
 
-    public long addItem(String itemName, double cost, String sku, String category, int reorderLevel) {
+    public long addItem(String itemName, double cost, String sku, String category, int reorderLevel, int isActive) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_ITEM_NAME, itemName);
@@ -215,10 +221,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_SKU, sku);
         values.put(COLUMN_CATEGORY, category);
         values.put(COLUMN_REORDER_LEVEL, reorderLevel);
+        values.put(COLUMN_IS_ACTIVE, isActive);
 
         long id = db.insert(TABLE_ITEMS, null, values);
         db.close();
         return id;
+    }
+
+    public long addItem(String itemName, double cost, String sku, String category, int reorderLevel) {
+        return addItem(itemName, cost, sku, category, reorderLevel, 1);
     }
 
     public Cursor getAllItems() {
@@ -226,7 +237,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return db.rawQuery("SELECT * FROM " + TABLE_ITEMS, null);
     }
 
-    public int updateItem(int id, String itemName, double cost, String sku, String category, int reorderLevel) {
+    public Cursor searchItems(String query) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String selection = COLUMN_ITEM_NAME + " LIKE ? OR " + COLUMN_SKU + " LIKE ? OR " + COLUMN_CATEGORY + " LIKE ?";
+        String[] selectionArgs = new String[]{"%" + query + "%", "%" + query + "%", "%" + query + "%"};
+        return db.query(TABLE_ITEMS, null, selection, selectionArgs, null, null, COLUMN_ITEM_NAME + " ASC");
+    }
+
+    public int updateItem(int id, String itemName, double cost, String sku, String category, int reorderLevel, int isActive) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_ITEM_NAME, itemName);
@@ -234,8 +252,25 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_SKU, sku);
         values.put(COLUMN_CATEGORY, category);
         values.put(COLUMN_REORDER_LEVEL, reorderLevel);
+        values.put(COLUMN_IS_ACTIVE, isActive);
 
         return db.update(TABLE_ITEMS, values, COLUMN_ID + " = ?", new String[]{String.valueOf(id)});
+    }
+
+    public int updateItem(int id, String itemName, double cost, String sku, String category, int reorderLevel) {
+        return updateItem(id, itemName, cost, sku, category, reorderLevel, 1);
+    }
+
+    public Cursor getActiveItems() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        return db.query(TABLE_ITEMS, null, COLUMN_IS_ACTIVE + " = 1", null, null, null, COLUMN_ITEM_NAME + " ASC");
+    }
+
+    public boolean toggleItemStatus(int id, int status) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_IS_ACTIVE, status);
+        return db.update(TABLE_ITEMS, values, COLUMN_ID + " = ?", new String[]{String.valueOf(id)}) > 0;
     }
 
     public boolean addStock(int id, int addedQty) {
@@ -303,6 +338,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         String selection = COLUMN_FIRST_NAME + " LIKE ? OR " + COLUMN_LAST_NAME + " LIKE ? OR " + COLUMN_STORE_NAME + " LIKE ? OR " + COLUMN_CONTACT + " LIKE ?";
         String[] selectionArgs = new String[]{"%" + query + "%", "%" + query + "%", "%" + query + "%", "%" + query + "%"};
         return db.query(TABLE_CUSTOMERS, null, selection, selectionArgs, null, null, COLUMN_FIRST_NAME + " ASC");
+    }
+
+    public Cursor getCustomerById(int id) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        return db.query(TABLE_CUSTOMERS, null, COLUMN_ID + " = ?", new String[]{String.valueOf(id)}, null, null, null);
     }
 
     public long saveOrder(int customerId, String date, double total, double paid, double due, Map<Integer, Integer> quantities, Map<Integer, Double> prices) {

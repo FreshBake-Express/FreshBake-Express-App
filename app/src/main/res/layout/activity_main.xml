@@ -28,90 +28,12 @@
             app:title="Delivery &amp; Billing"
             app:titleTextColor="@color/white" />
 
-        <!-- Fragment Host (Keeping existing includes logic but in a container) -->
+        <!-- Fragment Host -->
         <FrameLayout
             android:id="@+id/fragmentContainer"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1">
-
-            <include
-                android:id="@+id/deliveryLayout"
-                layout="@layout/fragment_delivery"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="visible" />
-
-            <include
-                android:id="@+id/customersLayout"
-                layout="@layout/fragment_customers"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone" />
-
-            <include
-                android:id="@+id/addCustomerLayout"
-                layout="@layout/fragment_add_customer"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone" />
-
-            <include
-                android:id="@+id/historyLayout"
-                layout="@layout/fragment_history"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone" />
-
-            <include
-                android:id="@+id/customerBillingHistoryLayout"
-                layout="@layout/fragment_customer_billing_history"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone" />
-
-            <include
-                android:id="@+id/billDetailsLayout"
-                layout="@layout/fragment_bill_details"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone" />
-
-            <include
-                android:id="@+id/itemsLayout"
-                layout="@layout/fragment_items"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone" />
-
-            <include
-                android:id="@+id/stockManagementLayout"
-                layout="@layout/fragment_stock_management"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone" />
-
-            <include
-                android:id="@+id/settingsLayout"
-                layout="@layout/fragment_settings"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone" />
-
-            <include
-                android:id="@+id/addItemLayout"
-                layout="@layout/fragment_add_item"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone" />
-
-            <include
-                android:id="@+id/addGRNLayout"
-                layout="@layout/fragment_add_grn"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone" />
-        </FrameLayout>
+            android:layout_weight="1" />
 
     </LinearLayout>
 

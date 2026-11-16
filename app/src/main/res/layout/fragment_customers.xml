@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:background="@color/screen_bg"
     android:fillViewport="true"
-    android:visibility="gone">
+    android:visibility="visible">
 
     <LinearLayout
         android:layout_width="match_parent"
