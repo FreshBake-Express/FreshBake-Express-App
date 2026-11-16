@@ -198,16 +198,6 @@ public class CustomersFragment extends Fragment {
 
         customerCard.setOnClickListener(v -> {
             // Start a delivery bill for this customer
-            DeliveryFragment deliveryFragment = new DeliveryFragment();
-            Bundle args = new Bundle();
-            args.putInt("selected_customer_id", id);
-            deliveryFragment.setArguments(args);
-            
-            getParentFragmentManager().beginTransaction()
-                    .replace(R.id.fragmentContainer, deliveryFragment)
-                    .commit();
-            
-            // Also update the navigation drawer selection in MainActivity if possible
             if (getActivity() instanceof MainActivity) {
                 ((MainActivity) getActivity()).navigateToDelivery(id);
             }

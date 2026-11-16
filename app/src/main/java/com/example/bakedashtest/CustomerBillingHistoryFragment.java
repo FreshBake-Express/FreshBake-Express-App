@@ -77,8 +77,13 @@ public class CustomerBillingHistoryFragment extends Fragment {
 
         tvBillingCustomerName.setText(customerName);
         tvBillingStoreName.setText(storeName);
-        tvTotalCustomerSales.setText(String.valueOf((int)totalSales));
-        tvTotalCustomerDue.setText(String.valueOf((int)currentDue));
+        tvTotalCustomerSales.setText("Rs. " + (int)totalSales);
+        if (currentDue < 0) {
+            tvTotalCustomerDue.setText("Credit: Rs. " + (int)Math.abs(currentDue));
+            tvTotalCustomerDue.setTextColor(android.graphics.Color.parseColor("#10B981"));
+        } else {
+            tvTotalCustomerDue.setText("Rs. " + (int)currentDue);
+        }
 
         etSettleAmountHistory.setSelectAllOnFocus(true);
 
@@ -111,7 +116,12 @@ public class CustomerBillingHistoryFragment extends Fragment {
             dbHelper.updateCustomerDue(customerId, currentDue - amount);
             Toast.makeText(requireContext(), "Payment settled", Toast.LENGTH_SHORT).show();
             currentDue -= amount;
-            tvTotalCustomerDue.setText(String.valueOf((int)currentDue));
+            if (currentDue < 0) {
+                tvTotalCustomerDue.setText("Credit: Rs. " + (int)Math.abs(currentDue));
+                tvTotalCustomerDue.setTextColor(android.graphics.Color.parseColor("#10B981"));
+            } else {
+                tvTotalCustomerDue.setText("Rs. " + (int)currentDue);
+            }
             etSettleAmountHistory.setText("");
             refreshTransactions();
         }

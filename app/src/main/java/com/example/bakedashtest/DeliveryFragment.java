@@ -1,6 +1,7 @@
 package com.example.bakedashtest;
 
 import android.database.Cursor;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -19,6 +20,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.button.MaterialButton;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -33,13 +36,19 @@ public class DeliveryFragment extends Fragment {
     private View selectedCustomerCard;
     private TextView selectedAvatar, selectedCustomerName, selectedStoreName, selectedDueAmount;
     private int selectedCustomerId = -1;
+    private double currentCustomerArrears = 0.0;
+
     private LinearLayout llDeliveryItemsList;
     private View cardPaymentDetails, rlDeliveryTotal, llDeliveryButtons;
     private TextView tvDeliveryTotal, tvPrevArrears, tvTotalDue, tvRemainingBalance, tvFullPayHelper;
     private EditText etPaymentAmount;
     private ImageView btnClearSelection;
-    private Map<Integer, Integer> deliveryQuantities = new HashMap<>();
-    private Map<Integer, Double> itemPrices = new HashMap<>();
+    private MaterialButton btnSaveAndPrintBill;
+
+    private final Map<Integer, Integer> deliveryQuantities = new HashMap<>();
+    private final Map<Integer, Double> itemPrices = new HashMap<>();
+    private final Map<Integer, Integer> itemStocks = new HashMap<>();
+    private final Map<Integer, String> itemNames = new HashMap<>();
 
     @Nullable
     @Override
@@ -66,6 +75,7 @@ public class DeliveryFragment extends Fragment {
         etPaymentAmount = view.findViewById(R.id.etPaymentAmount);
         tvFullPayHelper = view.findViewById(R.id.tvFullPayHelper);
         btnClearSelection = view.findViewById(R.id.btnClearSelection);
+        btnSaveAndPrintBill = view.findViewById(R.id.btnSaveAndPrintBill);
 
         setupClickListeners();
         setupSearch();
@@ -88,7 +98,7 @@ public class DeliveryFragment extends Fragment {
             String lastName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_LAST_NAME));
             String storeName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_STORE_NAME));
             double oldBill = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OLD_BILL));
-            
+
             selectCustomer(customerId, firstName, lastName, storeName, oldBill);
             cursor.close();
         }
@@ -97,13 +107,11 @@ public class DeliveryFragment extends Fragment {
     private void setupClickListeners() {
         if (tvFullPayHelper != null) {
             tvFullPayHelper.setOnClickListener(v -> {
-                try {
-                    String totalDueStr = tvTotalDue.getText().toString().replace("Rs. ", "").replace(",", "").trim();
-                    double totalDue = Double.parseDouble(totalDueStr);
-                    etPaymentAmount.setText(String.valueOf((int) totalDue));
-                } catch (Exception e) {
-                    Toast.makeText(requireContext(), "Error calculating full pay", Toast.LENGTH_SHORT).show();
-                }
+                double deliveryTotal = calculateDeliveryTotal();
+                double netPayable = deliveryTotal + currentCustomerArrears;
+                // If net payable is > 0, full pay is netPayable. If customer has surplus credit, pay is 0.
+                double fullPay = Math.max(0, netPayable);
+                etPaymentAmount.setText(String.valueOf((int) fullPay));
             });
         }
 
@@ -111,9 +119,8 @@ public class DeliveryFragment extends Fragment {
             btnClearSelection.setOnClickListener(v -> resetDeliveryScreen());
         }
 
-        View btnSaveAndPrint = getView() != null ? getView().findViewById(R.id.btnSaveAndPrintBill) : null;
-        if (btnSaveAndPrint != null) {
-            btnSaveAndPrint.setOnClickListener(v -> saveCurrentBill(true));
+        if (btnSaveAndPrintBill != null) {
+            btnSaveAndPrintBill.setOnClickListener(v -> saveCurrentBill(true));
         }
     }
 
@@ -130,8 +137,16 @@ public class DeliveryFragment extends Fragment {
         llDeliveryItemsList.removeAllViews();
         deliveryQuantities.clear();
         itemPrices.clear();
+        itemStocks.clear();
+        itemNames.clear();
 
-        Cursor cursor = dbHelper.getAllItems();
+        // Prefer active items, fallback to all items if none marked active
+        Cursor cursor = dbHelper.getActiveItems();
+        if (cursor == null || cursor.getCount() == 0) {
+            if (cursor != null) cursor.close();
+            cursor = dbHelper.getAllItems();
+        }
+
         if (cursor != null && cursor.moveToFirst()) {
             do {
                 int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
@@ -141,6 +156,8 @@ public class DeliveryFragment extends Fragment {
 
                 itemPrices.put(id, cost);
                 deliveryQuantities.put(id, 0);
+                itemStocks.put(id, onHand);
+                itemNames.put(id, name);
 
                 View row = LayoutInflater.from(requireContext()).inflate(R.layout.item_delivery_row, llDeliveryItemsList, false);
                 setupDeliveryItemRow(row, id, name, cost, onHand);
@@ -162,13 +179,19 @@ public class DeliveryFragment extends Fragment {
 
         tvName.setText(name);
         if (tvPriceDisplay != null) {
-            tvPriceDisplay.setText("Price: " + (int) price + "/" + stock);
+            String priceStr = (price % 1 == 0) ? String.valueOf((int) price) : String.format(Locale.getDefault(), "%.2f", price);
+            tvPriceDisplay.setText("Price: Rs. " + priceStr + " / " + stock);
         }
         etQuantity.setText("0");
         tvTotal.setText("0");
 
         btnPlus.setOnClickListener(v -> {
-            int qty = deliveryQuantities.get(id) + 1;
+            int currentQty = deliveryQuantities.containsKey(id) ? deliveryQuantities.get(id) : 0;
+            if (currentQty >= stock) {
+                Toast.makeText(requireContext(), "Only " + stock + " units available in stock for " + name, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            int qty = currentQty + 1;
             deliveryQuantities.put(id, qty);
             etQuantity.setText(String.valueOf(qty));
             tvTotal.setText(String.valueOf((int) (qty * price)));
@@ -177,9 +200,9 @@ public class DeliveryFragment extends Fragment {
         });
 
         btnMinus.setOnClickListener(v -> {
-            int qty = deliveryQuantities.get(id);
-            if (qty > 0) {
-                qty--;
+            int currentQty = deliveryQuantities.containsKey(id) ? deliveryQuantities.get(id) : 0;
+            if (currentQty > 0) {
+                int qty = currentQty - 1;
                 deliveryQuantities.put(id, qty);
                 etQuantity.setText(String.valueOf(qty));
                 tvTotal.setText(qty == 0 ? "0" : String.valueOf((int) (qty * price)));
@@ -203,17 +226,48 @@ public class DeliveryFragment extends Fragment {
             return true;
         });
 
+        etQuantity.setSelectAllOnFocus(true);
+        etQuantity.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                if ("0".equals(etQuantity.getText().toString().trim())) {
+                    etQuantity.setText("");
+                }
+            } else {
+                if (etQuantity.getText().toString().trim().isEmpty()) {
+                    etQuantity.setText("0");
+                }
+            }
+        });
+
         etQuantity.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override public void afterTextChanged(Editable s) {
+                if (s != null && s.length() > 1 && s.toString().startsWith("0")) {
+                    String stripped = s.toString().replaceFirst("^0+", "");
+                    if (stripped.isEmpty()) stripped = "0";
+                    etQuantity.setText(stripped);
+                    etQuantity.setSelection(stripped.length());
+                    return;
+                }
+
                 int qty = 0;
                 if (s != null && s.length() > 0) {
                     try { qty = Integer.parseInt(s.toString()); } catch (NumberFormatException e) { qty = 0; }
                 }
-                if (deliveryQuantities.get(id) != qty) {
+
+                if (qty > stock) {
+                    qty = Math.max(0, stock);
+                    Toast.makeText(requireContext(), "Only " + stock + " units available in stock for " + name, Toast.LENGTH_SHORT).show();
+                    etQuantity.setText(String.valueOf(qty));
+                    etQuantity.setSelection(String.valueOf(qty).length());
+                    return;
+                }
+
+                Integer existingQty = deliveryQuantities.get(id);
+                if (existingQty == null || existingQty != qty) {
                     deliveryQuantities.put(id, qty);
-                    tvTotal.setText(String.valueOf((int) (qty * price)));
+                    tvTotal.setText(qty == 0 ? "0" : String.valueOf((int) (qty * price)));
                     updateItemCardStyle(itemCardRoot, qty);
                     updateDeliveryTotals();
                 }
@@ -226,11 +280,19 @@ public class DeliveryFragment extends Fragment {
         cardRoot.setBackgroundResource(qty > 0 ? R.drawable.bg_item_card_active : R.drawable.bg_item_card_normal);
     }
 
-    private void updateDeliveryTotals() {
+    private double calculateDeliveryTotal() {
         double deliveryTotal = 0;
-        for (Integer id : deliveryQuantities.keySet()) {
-            deliveryTotal += deliveryQuantities.get(id) * itemPrices.get(id);
+        for (Map.Entry<Integer, Integer> entry : deliveryQuantities.entrySet()) {
+            Double price = itemPrices.get(entry.getKey());
+            if (price != null && entry.getValue() > 0) {
+                deliveryTotal += entry.getValue() * price;
+            }
         }
+        return deliveryTotal;
+    }
+
+    private void updateDeliveryTotals() {
+        double deliveryTotal = calculateDeliveryTotal();
 
         tvDeliveryTotal.setText("Rs. " + (int) deliveryTotal);
 
@@ -238,25 +300,49 @@ public class DeliveryFragment extends Fragment {
         if (rlDeliveryTotal != null) rlDeliveryTotal.setVisibility(View.VISIBLE);
         if (llDeliveryButtons != null) llDeliveryButtons.setVisibility(View.VISIBLE);
 
-        double arrears = 0;
+        // Display Previous Arrears or Advance Credit
         if (selectedCustomerId != -1) {
-            try {
-                String arrearsText = selectedDueAmount.getText().toString().replace("Rs. ", "").replace(",", "").trim();
-                arrears = Double.parseDouble(arrearsText);
-            } catch (Exception e) {
-                arrears = 0;
+            if (currentCustomerArrears > 0) {
+                tvPrevArrears.setText("Rs. " + (int) currentCustomerArrears);
+                tvPrevArrears.setTextColor(Color.WHITE);
+            } else if (currentCustomerArrears < 0) {
+                tvPrevArrears.setText("-Rs. " + (int) Math.abs(currentCustomerArrears) + " (Credit)");
+                tvPrevArrears.setTextColor(Color.parseColor("#6EE7B7"));
+            } else {
+                tvPrevArrears.setText("Rs. 0");
+                tvPrevArrears.setTextColor(Color.WHITE);
             }
+        } else {
+            tvPrevArrears.setText("Rs. 0");
+            tvPrevArrears.setTextColor(Color.WHITE);
         }
-        tvPrevArrears.setText("Rs. " + (int) arrears);
-        
-        double totalDue = deliveryTotal + arrears;
-        tvTotalDue.setText("Rs. " + (int) totalDue);
-        
+
+        // Net Amount Due to Pay Today
+        double netPayable = deliveryTotal + currentCustomerArrears;
+        if (netPayable > 0) {
+            tvTotalDue.setText("Rs. " + (int) netPayable);
+            tvTotalDue.setTextColor(Color.WHITE);
+        } else if (netPayable < 0) {
+            tvTotalDue.setText("Rs. 0 (Covered by Credit)");
+            tvTotalDue.setTextColor(Color.parseColor("#6EE7B7"));
+        } else {
+            tvTotalDue.setText("Rs. 0");
+            tvTotalDue.setTextColor(Color.parseColor("#6EE7B7"));
+        }
+
         updateRemainingBalance();
     }
 
     private void setupPaymentInput() {
         if (etPaymentAmount == null) return;
+        etPaymentAmount.setSelectAllOnFocus(true);
+        etPaymentAmount.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                if ("0".equals(etPaymentAmount.getText().toString().trim())) {
+                    etPaymentAmount.setText("");
+                }
+            }
+        });
         etPaymentAmount.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { updateRemainingBalance(); }
@@ -265,20 +351,26 @@ public class DeliveryFragment extends Fragment {
     }
 
     private void updateRemainingBalance() {
-        double totalDue = 0;
-        try {
-            String dueStr = tvTotalDue.getText().toString().replace("Rs. ", "").replace(",", "").trim();
-            totalDue = Double.parseDouble(dueStr);
-        } catch (Exception e) { totalDue = 0; }
+        double deliveryTotal = calculateDeliveryTotal();
+        double netPayable = deliveryTotal + currentCustomerArrears;
 
         double payment = 0;
-        String paymentStr = etPaymentAmount.getText().toString();
+        String paymentStr = etPaymentAmount.getText() != null ? etPaymentAmount.getText().toString().trim() : "";
         if (!paymentStr.isEmpty()) {
-            try { payment = Double.parseDouble(paymentStr); } catch (Exception e) { payment = 0; }
+            try { payment = Double.parseDouble(paymentStr); } catch (Exception ignored) { payment = 0; }
         }
 
-        double remaining = totalDue - payment;
-        tvRemainingBalance.setText("Rs. " + (int) remaining);
+        double remaining = netPayable - payment;
+        if (remaining > 0) {
+            tvRemainingBalance.setText("Due: Rs. " + (int) remaining);
+            tvRemainingBalance.setTextColor(Color.parseColor("#FDA4AF"));
+        } else if (remaining < 0) {
+            tvRemainingBalance.setText("Credit: Rs. " + (int) Math.abs(remaining));
+            tvRemainingBalance.setTextColor(Color.parseColor("#6EE7B7"));
+        } else {
+            tvRemainingBalance.setText("Settled: Rs. 0");
+            tvRemainingBalance.setTextColor(Color.parseColor("#6EE7B7"));
+        }
     }
 
     private void setupSearch() {
@@ -297,21 +389,21 @@ public class DeliveryFragment extends Fragment {
     private void performCustomerSearch(String query) {
         llSearchResults.removeAllViews();
         Cursor cursor = dbHelper.searchCustomers(query);
-        
+
         if (cursor != null && cursor.moveToFirst()) {
             llSearchResults.setVisibility(View.VISIBLE);
             int count = 0;
             do {
-                int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
-                String firstName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_FIRST_NAME));
-                String lastName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_LAST_NAME));
-                String storeName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_STORE_NAME));
-                double oldBill = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OLD_BILL));
+                final int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
+                final String firstName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_FIRST_NAME));
+                final String lastName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_LAST_NAME));
+                final String storeName = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_STORE_NAME));
+                final double oldBill = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_OLD_BILL));
 
                 View itemView = LayoutInflater.from(requireContext()).inflate(R.layout.item_search_result, llSearchResults, false);
-                ((TextView)itemView.findViewById(R.id.textName)).setText(firstName + " " + lastName);
-                ((TextView)itemView.findViewById(R.id.textStore)).setText(storeName);
-                
+                ((TextView) itemView.findViewById(R.id.textName)).setText(firstName + " " + lastName);
+                ((TextView) itemView.findViewById(R.id.textStore)).setText(storeName);
+
                 itemView.setOnClickListener(v -> {
                     selectCustomer(id, firstName, lastName, storeName, oldBill);
                     llSearchResults.setVisibility(View.GONE);
@@ -330,17 +422,28 @@ public class DeliveryFragment extends Fragment {
 
     private void selectCustomer(int id, String firstName, String lastName, String storeName, double oldBill) {
         selectedCustomerId = id;
+        currentCustomerArrears = oldBill;
         selectedCustomerCard.setVisibility(View.VISIBLE);
-        
+
         String initials = "";
-        if (firstName.length() > 0) initials += firstName.charAt(0);
-        if (lastName.length() > 0) initials += lastName.charAt(0);
-        
-        selectedAvatar.setText(initials.toUpperCase());
+        if (firstName != null && firstName.length() > 0) initials += firstName.charAt(0);
+        if (lastName != null && lastName.length() > 0) initials += lastName.charAt(0);
+
+        selectedAvatar.setText(initials.toUpperCase(Locale.getDefault()));
         selectedCustomerName.setText(firstName + " " + lastName);
         selectedStoreName.setText(storeName);
-        selectedDueAmount.setText("Rs. " + (int) oldBill);
-        
+
+        if (oldBill > 0) {
+            selectedDueAmount.setText("Due: Rs. " + (int) oldBill);
+            selectedDueAmount.setTextColor(Color.parseColor("#E11D48"));
+        } else if (oldBill < 0) {
+            selectedDueAmount.setText("Credit: Rs. " + (int) Math.abs(oldBill));
+            selectedDueAmount.setTextColor(Color.parseColor("#10B981"));
+        } else {
+            selectedDueAmount.setText("Settled: Rs. 0");
+            selectedDueAmount.setTextColor(Color.parseColor("#10B981"));
+        }
+
         updateDeliveryTotals();
     }
 
@@ -352,7 +455,10 @@ public class DeliveryFragment extends Fragment {
 
         boolean hasValidItems = false;
         for (Integer qty : deliveryQuantities.values()) {
-            if (qty > 0) { hasValidItems = true; break; }
+            if (qty != null && qty > 0) {
+                hasValidItems = true;
+                break;
+            }
         }
 
         if (!hasValidItems) {
@@ -360,12 +466,28 @@ public class DeliveryFragment extends Fragment {
             return;
         }
 
+        // Verify no items exceed available on-hand stock
+        for (Map.Entry<Integer, Integer> entry : deliveryQuantities.entrySet()) {
+            int itemId = entry.getKey();
+            int qty = entry.getValue() != null ? entry.getValue() : 0;
+            if (qty > 0) {
+                Integer avail = itemStocks.get(itemId);
+                int stockLimit = avail != null ? avail : 0;
+                if (qty > stockLimit) {
+                    String itemName = itemNames.containsKey(itemId) ? itemNames.get(itemId) : "Item";
+                    Toast.makeText(requireContext(), "Cannot complete bill: " + itemName + " has only " + stockLimit + " units in stock (selected: " + qty + ")", Toast.LENGTH_LONG).show();
+                    return;
+                }
+            }
+        }
+
         try {
-            double deliveryTotal = Double.parseDouble(tvDeliveryTotal.getText().toString().replace("Rs. ", "").replace(",", "").trim());
-            double totalDue = Double.parseDouble(tvTotalDue.getText().toString().replace("Rs. ", "").replace(",", "").trim());
-            String paymentStr = etPaymentAmount.getText().toString().trim();
+            double deliveryTotal = calculateDeliveryTotal();
+            String paymentStr = etPaymentAmount.getText() != null ? etPaymentAmount.getText().toString().trim() : "";
             double paid = paymentStr.isEmpty() ? 0 : Double.parseDouble(paymentStr);
-            double remaining = totalDue - paid;
+
+            // Final cumulative customer due = (deliveryTotal + previousArrears) - paid
+            double remaining = (deliveryTotal + currentCustomerArrears) - paid;
 
             String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
             long orderId = dbHelper.saveOrder(selectedCustomerId, date, deliveryTotal, paid, remaining, deliveryQuantities, itemPrices);
@@ -374,20 +496,22 @@ public class DeliveryFragment extends Fragment {
                 dbHelper.updateCustomerDue(selectedCustomerId, remaining);
                 Toast.makeText(requireContext(), "Bill saved successfully!", Toast.LENGTH_SHORT).show();
                 if (autoPrint) {
-                    MainActivity activity = (MainActivity) getActivity();
-                    if (activity != null) activity.printBill((int) orderId);
+                    if (getActivity() instanceof MainActivity) {
+                        ((MainActivity) getActivity()).printBill((int) orderId);
+                    }
                 }
                 resetDeliveryScreen();
             } else {
-                Toast.makeText(requireContext(), "Failed to save bill", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Failed to save bill in database", Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
-            Toast.makeText(requireContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Error saving bill: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
     private void resetDeliveryScreen() {
         selectedCustomerId = -1;
+        currentCustomerArrears = 0.0;
         selectedCustomerCard.setVisibility(View.GONE);
         etCustomerSearch.setText("");
         etPaymentAmount.setText("");

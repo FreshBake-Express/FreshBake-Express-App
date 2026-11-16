@@ -280,6 +280,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return true;
     }
 
+    public boolean setOnHandStock(int id, int newOnHand) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_ON_HAND, Math.max(0, newOnHand));
+        return db.update(TABLE_ITEMS, values, COLUMN_ID + " = ?", new String[]{String.valueOf(id)}) > 0;
+    }
+
     public long addGRNLog(int itemId, int qty) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
@@ -455,14 +462,100 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public Cursor getTodayStats() {
-        SQLiteDatabase db = this.getReadableDatabase();
         String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(new java.util.Date());
+        return getSalesStatsByDate(today, today);
+    }
+
+    public Cursor getSalesStatsByDate(String startDate, String endDate) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String start = startDate + " 00:00:00";
+        String end = endDate + " 23:59:59";
         String query = "SELECT " +
-                "(SELECT IFNULL(SUM(" + COLUMN_ORDER_TOTAL + "), 0) FROM " + TABLE_ORDERS + " WHERE " + COLUMN_ORDER_DATE + " LIKE ?) as total_revenue, " +
-                "(SELECT COUNT(" + COLUMN_ID + ") FROM " + TABLE_ORDERS + " WHERE " + COLUMN_ORDER_DATE + " LIKE ?) as total_bills, " +
-                "(SELECT IFNULL(SUM(" + COLUMN_OLD_BILL + "), 0) FROM " + TABLE_CUSTOMERS + ") as total_due, " +
-                "(SELECT COUNT(DISTINCT " + COLUMN_ORDER_CUSTOMER_ID + ") FROM " + TABLE_ORDERS + " WHERE " + COLUMN_ORDER_DATE + " LIKE ? AND " + COLUMN_ORDER_CUSTOMER_ID + " IN (SELECT " + COLUMN_ID + " FROM " + TABLE_CUSTOMERS + " WHERE " + COLUMN_OLD_BILL + " > 0)) as pending_stores";
-        return db.rawQuery(query, new String[]{today + "%", today + "%", today + "%"});
+                "IFNULL(SUM(" + COLUMN_ORDER_TOTAL + "), 0) as total_revenue, " +
+                "COUNT(" + COLUMN_ID + ") as total_bills, " +
+                "IFNULL(SUM(" + COLUMN_ORDER_PAID + "), 0) as total_collected, " +
+                "IFNULL(SUM(" + COLUMN_ORDER_DUE + "), 0) as total_due, " +
+                "(SELECT COUNT(DISTINCT " + COLUMN_ORDER_CUSTOMER_ID + ") FROM " + TABLE_ORDERS + " WHERE " + COLUMN_ORDER_DATE + " >= ? AND " + COLUMN_ORDER_DATE + " <= ? AND " + COLUMN_ORDER_DUE + " > 0) as pending_stores " +
+                "FROM " + TABLE_ORDERS + " " +
+                "WHERE " + COLUMN_ORDER_DATE + " >= ? AND " + COLUMN_ORDER_DATE + " <= ?";
+        return db.rawQuery(query, new String[]{start, end, start, end});
+    }
+
+    public Cursor getDailySalesTrend(String startDate, String endDate) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String start = startDate + " 00:00:00";
+        String end = endDate + " 23:59:59";
+        String query = "SELECT substr(" + COLUMN_ORDER_DATE + ", 1, 10) as sale_date, " +
+                "IFNULL(SUM(" + COLUMN_ORDER_TOTAL + "), 0) as day_revenue, " +
+                "COUNT(" + COLUMN_ID + ") as day_bills " +
+                "FROM " + TABLE_ORDERS + " " +
+                "WHERE " + COLUMN_ORDER_DATE + " >= ? AND " + COLUMN_ORDER_DATE + " <= ? " +
+                "GROUP BY sale_date " +
+                "ORDER BY sale_date ASC";
+        return db.rawQuery(query, new String[]{start, end});
+    }
+
+    public Cursor getHourlySalesIntervals(String date) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String start = date + " 00:00:00";
+        String end = date + " 23:59:59";
+        String query = "SELECT " +
+                "CAST(substr(" + COLUMN_ORDER_DATE + ", 12, 2) AS INTEGER) as order_hour, " +
+                "IFNULL(SUM(" + COLUMN_ORDER_TOTAL + "), 0) as slot_revenue, " +
+                "COUNT(" + COLUMN_ID + ") as slot_bills " +
+                "FROM " + TABLE_ORDERS + " " +
+                "WHERE " + COLUMN_ORDER_DATE + " >= ? AND " + COLUMN_ORDER_DATE + " <= ? " +
+                "GROUP BY order_hour " +
+                "ORDER BY order_hour ASC";
+        return db.rawQuery(query, new String[]{start, end});
+    }
+
+    public Cursor getItemWiseSalesByDate(String startDate, String endDate, String query) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String start = startDate + " 00:00:00";
+        String end = endDate + " 23:59:59";
+        String sql = "SELECT i." + COLUMN_ID + ", i." + COLUMN_ITEM_NAME + ", i." + COLUMN_COST + ", " +
+                "SUM(oi." + COLUMN_OI_QUANTITY + ") as total_qty, " +
+                "SUM(oi." + COLUMN_OI_QUANTITY + " * oi." + COLUMN_OI_PRICE + ") as total_price " +
+                "FROM " + TABLE_ORDER_ITEMS + " oi " +
+                "JOIN " + TABLE_ORDERS + " o ON oi." + COLUMN_OI_ORDER_ID + " = o." + COLUMN_ID + " " +
+                "JOIN " + TABLE_ITEMS + " i ON oi." + COLUMN_OI_ITEM_ID + " = i." + COLUMN_ID + " " +
+                "WHERE o." + COLUMN_ORDER_DATE + " >= ? AND o." + COLUMN_ORDER_DATE + " <= ? ";
+
+        if (query != null && !query.trim().isEmpty()) {
+            sql += "AND i." + COLUMN_ITEM_NAME + " LIKE ? ";
+        }
+
+        sql += "GROUP BY oi." + COLUMN_OI_ITEM_ID + " " +
+                "ORDER BY total_qty DESC";
+
+        if (query != null && !query.trim().isEmpty()) {
+            return db.rawQuery(sql, new String[]{start, end, "%" + query.trim() + "%"});
+        }
+        return db.rawQuery(sql, new String[]{start, end});
+    }
+
+    public Cursor getCustomerWiseSalesByDate(String startDate, String endDate, String query) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String start = startDate + " 00:00:00";
+        String end = endDate + " 23:59:59";
+        String sql = "SELECT o." + COLUMN_ID + " as order_id, o." + COLUMN_ORDER_DATE + ", o." + COLUMN_ORDER_TOTAL + ", o." + COLUMN_ORDER_PAID + ", o." + COLUMN_ORDER_DUE + ", " +
+                "c." + COLUMN_ID + " as customer_id, c." + COLUMN_FIRST_NAME + ", c." + COLUMN_LAST_NAME + ", c." + COLUMN_STORE_NAME + ", c." + COLUMN_CONTACT + " " +
+                "FROM " + TABLE_ORDERS + " o " +
+                "JOIN " + TABLE_CUSTOMERS + " c ON o." + COLUMN_ORDER_CUSTOMER_ID + " = c." + COLUMN_ID + " " +
+                "WHERE o." + COLUMN_ORDER_DATE + " >= ? AND o." + COLUMN_ORDER_DATE + " <= ? ";
+
+        if (query != null && !query.trim().isEmpty()) {
+            sql += "AND (c." + COLUMN_FIRST_NAME + " LIKE ? OR c." + COLUMN_LAST_NAME + " LIKE ? OR c." + COLUMN_STORE_NAME + " LIKE ?) ";
+        }
+
+        sql += "ORDER BY o." + COLUMN_ORDER_DATE + " DESC";
+
+        if (query != null && !query.trim().isEmpty()) {
+            String q = "%" + query.trim() + "%";
+            return db.rawQuery(sql, new String[]{start, end, q, q, q});
+        }
+        return db.rawQuery(sql, new String[]{start, end});
     }
 
     public Cursor getItemWiseSales() {

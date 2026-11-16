@@ -321,10 +321,14 @@ public class MainActivity extends AppCompatActivity {
             html.append("</tbody></table>");
 
             html.append("<div class='totals'>")
-                .append("<p><strong>Sub Total: </strong>").append((int)total).append("</p>")
-                .append("<p><strong>Paid Amount: </strong>").append((int)paid).append("</p>")
-                .append("<p><strong>Balance Due: </strong>").append((int)due).append("</p>")
-                .append("</div>");
+                .append("<p><strong>Sub Total: </strong>Rs. ").append((int)total).append("</p>")
+                .append("<p><strong>Paid Amount: </strong>Rs. ").append((int)paid).append("</p>");
+            if (due < 0) {
+                html.append("<p><strong>Advance Credit: </strong>Rs. ").append(Math.abs((int)due)).append("</p>");
+            } else {
+                html.append("<p><strong>Balance Due: </strong>Rs. ").append((int)due).append("</p>");
+            }
+            html.append("</div>");
 
             html.append("<div class='footer'><p>Thank you for your business!</p></div>")
                 .append("</body></html>");
